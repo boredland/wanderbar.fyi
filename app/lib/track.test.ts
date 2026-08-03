@@ -155,10 +155,25 @@ describe('trackTotals', () => {
     expect(t.descentM).toBeLessThan(10)
   })
 
-  it('measures the full track, not a resampled subset', () => {
-    // Switchbacks: resampling to ~60 waypoints cuts the corners and loses most
-    // of the real distance. This is the regression that reported 9.7km for a
-    // 12.7km route.
+  it('matches an independent sum over every trackpoint', () => {
+    const zigzag: Pt[] = []
+    for (let i = 0; i < 2000; i++) {
+      zigzag.push({
+        lat: 47.42 + i * 1.8e-5 + Math.sin(i / 4) * 6e-5,
+        lon: 10.98 + i * 1.1e-5 + Math.cos(i / 4) * 1.2e-4,
+        ele: 800 + i * 0.4,
+        time: null
+      })
+    }
+    let expected = 0
+    for (let i = 1; i < zigzag.length; i++) expected += haversineM(zigzag[i - 1], zigzag[i])
+    expect(trackTotals(zigzag).distM).toBeCloseTo(expected, 5)
+  })
+
+  it('agrees with the last waypoint, so header and timeline cannot disagree', () => {
+    // Waypoints carry along-track distance, not the chord length of the
+    // sampled polyline: on switchbacks those differ by several percent, which
+    // is what made the last timeline row contradict the header.
     const zigzag: Pt[] = []
     for (let i = 0; i < 2000; i++) {
       zigzag.push({
@@ -169,14 +184,13 @@ describe('trackTotals', () => {
       })
     }
     const full = trackTotals(zigzag).distM
-    const resampled = resample(zigzag)
-    const viaWaypoints = resampled[resampled.length - 1].cumDistM
-    // The resampled path is measurably shorter, which is exactly why totals
-    // must not be derived from it.
-    expect(viaWaypoints).toBeLessThan(full * 0.9)
-    let expected = 0
-    for (let i = 1; i < zigzag.length; i++) expected += haversineM(zigzag[i - 1], zigzag[i])
-    expect(full).toBeCloseTo(expected, 5)
+    const wps = resample(zigzag)
+    expect(wps[wps.length - 1].cumDistM).toBeCloseTo(full, 5)
+    // And every waypoint is monotonic and within the track.
+    for (let i = 1; i < wps.length; i++) {
+      expect(wps[i].cumDistM).toBeGreaterThan(wps[i - 1].cumDistM)
+      expect(wps[i].cumDistM).toBeLessThanOrEqual(full + 1e-6)
+    }
   })
 
   it('ignores points with no elevation without throwing', () => {

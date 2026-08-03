@@ -129,6 +129,10 @@ export function resample(points: Pt[], spacingM = 2000): Waypoint[] {
   const spacing = Math.max(spacingM, total / 59)
 
   const picked: Pt[] = [points[0]]
+  // Along-track distance at each pick. Chords between picks are shorter than the
+  // trail itself, so distance must be carried from here rather than re-measured
+  // on the sampled polyline.
+  const alongM: number[] = [0]
   let travelled = 0
   let nextMark = spacing
   for (let i = 1; i < points.length; i++) {
@@ -143,20 +147,22 @@ export function resample(points: Pt[], spacingM = 2000): Waypoint[] {
         ele: a.ele !== null && b.ele !== null ? lerp(a.ele, b.ele, t) : (b.ele ?? a.ele),
         time: null
       })
+      alongM.push(nextMark)
       nextMark += spacing
     }
     travelled += leg
   }
   const last = points[points.length - 1]
   const tail = picked[picked.length - 1]
-  if (tail.lat !== last.lat || tail.lon !== last.lon) picked.push(last)
+  if (tail.lat !== last.lat || tail.lon !== last.lon) {
+    picked.push(last)
+    alongM.push(total)
+  }
 
   const out: Waypoint[] = []
-  let cumDist = 0
   let cumAscent = 0
   for (let i = 0; i < picked.length; i++) {
     if (i > 0) {
-      cumDist += haversineM(picked[i - 1], picked[i])
       const prevEle = picked[i - 1].ele
       const ele = picked[i].ele
       if (prevEle !== null && ele !== null) {
@@ -169,7 +175,7 @@ export function resample(points: Pt[], spacingM = 2000): Waypoint[] {
       lat: picked[i].lat,
       lon: picked[i].lon,
       eleM: picked[i].ele,
-      cumDistM: cumDist,
+      cumDistM: alongM[i],
       cumAscentM: cumAscent,
       etaOffsetS: 0
     })
