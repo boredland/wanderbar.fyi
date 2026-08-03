@@ -63,7 +63,7 @@ export default function Upload(props: { shareError?: string }) {
   return (
     <form class="flex flex-col gap-4" onSubmit={onSubmit}>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">GPX track</span>
+        <span class="text-[14px] text-muted">GPX track</span>
         <input
           type="file"
           name="gpx"
@@ -73,18 +73,18 @@ export default function Upload(props: { shareError?: string }) {
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Name (optional)</span>
+        <span class="text-[14px] text-muted">Name (optional)</span>
         <input
           type="text"
           name="name"
-          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="min-h-[44px] rounded-[6px] border border-line px-3"
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Start</span>
+        <span class="text-[14px] text-muted">Start</span>
         <select
           name="startAt"
-          class="figures min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
         >
           {startOptions(Date.now()).map((o) => (
             <option key={o.value} value={o.value}>
@@ -94,10 +94,10 @@ export default function Upload(props: { shareError?: string }) {
         </select>
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Pace profile</span>
+        <span class="text-[14px] text-muted">Pace profile</span>
         <select
           name="profile"
-          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="min-h-[44px] rounded-[6px] border border-line px-3"
         >
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
             <option key={id} value={id}>
@@ -108,12 +108,12 @@ export default function Upload(props: { shareError?: string }) {
       </label>
       <button
         type="submit"
-        class="min-h-[44px] rounded-[6px] bg-[--color-brand] px-4 font-medium text-[--color-ink] disabled:opacity-60"
+        class="min-h-[44px] rounded-[6px] bg-brand px-4 font-medium text-ink disabled:opacity-60"
         disabled={busy}
       >
         {busy ? 'Adding…' : 'Add track'}
       </button>
-      {error ? <p class="text-[14px] text-[--color-warn]">{error}</p> : null}
+      {error ? <p class="text-[14px] text-warn">{error}</p> : null}
     </form>
   )
 }

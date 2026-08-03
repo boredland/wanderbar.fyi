@@ -135,7 +135,7 @@ export default function TrackMap(props: Props) {
 
   if (props.simplified.length < 2) {
     return (
-      <div class="h-80 w-full rounded-[12px] bg-[--color-raised] p-4 text-[--color-muted]">
+      <div class="h-80 w-full rounded-[12px] bg-raised p-4 text-muted">
         track too short to map
       </div>
     )

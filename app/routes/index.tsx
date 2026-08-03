@@ -15,14 +15,14 @@ export default createRoute((c) => {
 
       <TrackView />
 
-      <details class="rounded-[12px] border border-[--color-line] p-4">
+      <details class="rounded-[12px] border border-line p-4">
         <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">Add a track</summary>
         <div class="pt-4">
           <Upload shareError={shareError} />
         </div>
       </details>
 
-      <details class="rounded-[12px] border border-[--color-line] p-4">
+      <details class="rounded-[12px] border border-line p-4">
         <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">This track</summary>
         <div class="flex flex-col gap-4 pt-4">
           <PositionButton />
@@ -30,7 +30,7 @@ export default createRoute((c) => {
         </div>
       </details>
 
-      <details class="rounded-[12px] border border-[--color-line] p-4">
+      <details class="rounded-[12px] border border-line p-4">
         <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">
           Warning settings
         </summary>
@@ -39,7 +39,7 @@ export default createRoute((c) => {
         </div>
       </details>
 
-      <details class="rounded-[12px] border border-[--color-line] p-4">
+      <details class="rounded-[12px] border border-line p-4">
         <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">
           Background checks
         </summary>
@@ -48,7 +48,87 @@ export default createRoute((c) => {
         </div>
       </details>
 
-      <footer class="border-t border-[--color-line] pt-4 text-[12px] text-[--color-muted]">
+      <footer class="flex flex-col gap-3 border-t border-line pt-4 text-[12px] text-muted">
+        <details>
+          <summary class="min-h-[44px] cursor-pointer py-2">Where the data comes from</summary>
+          <dl class="flex flex-col gap-3 pt-2 text-muted">
+            <div>
+              <dt class="font-medium text-ink">Forecast</dt>
+              <dd>
+                Hourly temperature, precipitation, wind, gusts and weather codes from{' '}
+                <a class="underline" href="https://open-meteo.com/">
+                  Open-Meteo
+                </a>
+                , fetched by your device for each waypoint along the track. Open-Meteo
+                blends several national models (ECMWF, GFS, ICON) rather than relying on
+                one.
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Second opinion</dt>
+              <dd>
+                A few checkpoints are cross-checked against the{' '}
+                <a class="underline" href="https://api.met.no/">
+                  Norwegian Meteorological Institute
+                </a>{' '}
+                (Yr). When the two disagree on temperature or rain, the timeline says so
+                instead of quietly picking one.
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Fire danger</dt>
+              <dd>
+                Not fetched: no public service offers a free point forecast. wanderbar
+                computes the Canadian Fire Weather Index on your device from 60 days of
+                Open-Meteo weather history, which is what gives it drought memory. Treat
+                it as an indication and always follow local fire bans.
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Daylight</dt>
+              <dd>Sunrise and sunset for each waypoint and date, from Open-Meteo.</dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Elevation</dt>
+              <dd>
+                Taken from your GPX file. If it has none, heights come from Open-Meteo's
+                Copernicus digital elevation model instead. The two are never mixed within
+                one track, because that would invent ascent at the join.
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Walking times</dt>
+              <dd>
+                Published pace standards, not guesses: DIN 33466 and DAV for hiking, the
+                SAC scale for mountain terrain, VAM benchmarks for cycling. They count
+                moving time only, so breaks are a separate setting.
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Your position</dt>
+              <dd>
+                Only ever from your own device, and only when you ask for it. Your track,
+                your position and every forecast stay in this browser: the server stores
+                nothing but a notification subscription.
+              </dd>
+            </div>
+            <div>
+              <dt class="font-medium text-ink">Map</dt>
+              <dd>
+                Tiles by{' '}
+                <a class="underline" href="https://opentopomap.org">
+                  OpenTopoMap
+                </a>{' '}
+                from OpenStreetMap data. Weather icons by{' '}
+                <a class="underline" href="https://github.com/metno/weathericons">
+                  MET Norway
+                </a>{' '}
+                (MIT).
+              </dd>
+            </div>
+          </dl>
+        </details>
+
         <a class="underline" href="https://github.com/boredland/wanderbar.fyi">
           Source on GitHub
         </a>

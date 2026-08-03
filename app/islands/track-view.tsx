@@ -110,7 +110,7 @@ export default function TrackView() {
     return () => clearInterval(id)
   }, [refetch])
 
-  if (!loaded) return <div class="py-6 text-[--color-muted]">Loading…</div>
+  if (!loaded) return <div class="py-6 text-muted">Loading…</div>
   if (!track) return null
 
   const currentSeq = estimatePosition(track.waypoints, fix, track.startAt, now)
@@ -151,14 +151,14 @@ export default function TrackView() {
         onRefetch={refetch}
       />
 
-      <dl class="flex flex-wrap gap-x-6 gap-y-2 rounded-[12px] bg-[--color-raised] px-4 py-3">
+      <dl class="flex flex-wrap gap-x-6 gap-y-2 rounded-[12px] bg-raised px-4 py-3">
         {[
           ['Time', hoursToText(totalS)],
           ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`],
           ['Ascent', `${Math.round(track.ascentM)} m`]
         ].map(([label, value]) => (
           <div key={label}>
-            <dt class="text-[12px] uppercase tracking-wide text-[--color-muted]">{label}</dt>
+            <dt class="text-[12px] uppercase tracking-wide text-muted">{label}</dt>
             <dd class="figures text-[20px] font-medium">{value}</dd>
           </div>
         ))}
@@ -167,7 +167,7 @@ export default function TrackView() {
       {done ? (
         <p class="text-[16px]">This hike is done.</p>
       ) : forecast === null ? (
-        <p class="text-[16px] text-[--color-muted]">
+        <p class="text-[16px] text-muted">
           Fetching the forecast, reload in a moment.
         </p>
       ) : null}
@@ -192,7 +192,7 @@ export default function TrackView() {
 
       <CapabilityLine subscribed={subscribed} schedule={schedule} />
 
-      <p class="text-[12px] text-[--color-muted]">
+      <p class="text-[12px] text-muted">
         Weather data by{' '}
         <a class="underline" href="https://open-meteo.com/">
           Open-Meteo.com
@@ -227,7 +227,7 @@ function Verdict(props: {
   }
   if (!props.forecast) {
     return (
-      <p class="text-[28px] font-bold leading-tight text-[--color-muted]">
+      <p class="text-[28px] font-bold leading-tight text-muted">
         Checking the weather ahead…
       </p>
     )
@@ -247,14 +247,14 @@ function Verdict(props: {
         <span class="disc disc-clear text-[20px]" aria-hidden="true">
           ✓
         </span>
-        <p class="pt-2 text-[28px] font-bold leading-tight text-[--color-clear]">
+        <p class="pt-2 text-[28px] font-bold leading-tight text-clear">
           No un-wanderbar weather ahead.
         </p>
       </div>
     )
   }
   const at = props.anchorMs + first.wp.etaOffsetS * 1000
-  const label = <span class="text-[--color-warn]">{conditionLabel[first.w.condition].toLowerCase()}</span>
+  const label = <span class="text-warn">{conditionLabel[first.w.condition].toLowerCase()}</span>
   // "Clear until X" is a lie when the very first waypoint is already warned.
   const immediate = first.wp.seq === props.remaining[0]?.seq
   return (
@@ -290,11 +290,11 @@ function PositionLine(props: {
   if (!props.fix) {
     // Honesty rule: say which assumption the times rest on.
     if (props.track.startAt === null) {
-      return <p class="text-[14px] text-[--color-muted]">Times assume you start now.</p>
+      return <p class="text-[14px] text-muted">Times assume you start now.</p>
     }
     const started = props.anchorMs <= props.now
     return (
-      <p class="text-[14px] text-[--color-muted]">
+      <p class="text-[14px] text-muted">
         {started ? 'Started' : 'Starting'}{' '}
         <span class="figures">{dayTime(props.anchorMs, props.now)}</span>
         {started ? ' (no position yet, times assume you kept pace)' : ''}
@@ -308,7 +308,7 @@ function PositionLine(props: {
   const offTrack =
     props.fix.snappedDistM > 5000 ? ', you appear to be >5 km off this track' : ''
   return (
-    <p class="text-[14px] text-[--color-muted]">
+    <p class="text-[14px] text-muted">
       {measured ? (
         <>
           You&rsquo;re at <span class="figures">km {fixKm.toFixed(1)}</span> (
@@ -374,9 +374,9 @@ function StartRow(props: { track: Track; now: number; onChanged: () => void }) {
 
   return (
     <label class="flex flex-wrap items-center gap-3">
-      <span class="text-[14px] text-[--color-muted]">Starting</span>
+      <span class="text-[14px] text-muted">Starting</span>
       <select
-        class="figures min-h-[44px] rounded-[6px] border border-[--color-line] bg-[--color-surface] px-3 font-medium"
+        class="figures min-h-[44px] rounded-[6px] border border-line bg-surface px-3 font-medium"
         value={current}
         onChange={(e) => choose((e.target as HTMLSelectElement).value)}
       >
@@ -404,8 +404,8 @@ function FreshnessRow(props: {
 }) {
   const stale = props.forecast !== null && props.now - props.forecast.fetchedAt > STALE_MS
   return (
-    <div class="flex items-center justify-between gap-4 border-t border-[--color-line] pt-3">
-      <p class={`text-[14px] ${stale ? 'font-medium text-[--color-warn]' : 'text-[--color-muted]'}`}>
+    <div class="flex items-center justify-between gap-4 border-t border-line pt-3">
+      <p class={`text-[14px] ${stale ? 'font-medium text-warn' : 'text-muted'}`}>
         {props.forecast ? (
           <>
             Last fetched <span class="figures">{clock(props.forecast.fetchedAt)}</span>
@@ -417,7 +417,7 @@ function FreshnessRow(props: {
       </p>
       <button
         type="button"
-        class="min-h-[44px] shrink-0 rounded-[6px] border border-[--color-line] px-4 py-2 font-medium disabled:opacity-60"
+        class="min-h-[44px] shrink-0 rounded-[6px] border border-line px-4 py-2 font-medium disabled:opacity-60"
         disabled={props.fetching}
         onClick={props.onRefetch}
       >
@@ -445,7 +445,7 @@ function Timeline(props: {
   const span = hiEle - loEle
 
   return (
-    <ol class="overflow-hidden rounded-[12px] border border-[--color-line]">
+    <ol class="overflow-hidden rounded-[12px] border border-line">
       {props.remaining.map((wp, i) => {
         const at = props.anchorMs + wp.etaOffsetS * 1000
         const hour = nearestHour(bySeq[wp.seq] ?? [], at)
@@ -470,7 +470,7 @@ function Timeline(props: {
           <li
             key={wp.seq}
             class={`ridge relative flex flex-col gap-1 py-3 pl-4 pr-3 ${
-              i > 0 ? 'border-t border-[--color-line]' : ''
+              i > 0 ? 'border-t border-line' : ''
             } ${ws.length ? 'row-warn' : isNext ? 'row-now' : ''}`}
             style={`--ridge:${ridge}%`}
           >
@@ -488,7 +488,7 @@ function Timeline(props: {
               <span class="figures w-[52px] shrink-0 text-[16px] font-medium">
                 {hour?.tempC === null || hour === null ? '—' : `${hour.tempC.toFixed(0)}°`}
               </span>
-              <span class="figures text-[14px] text-[--color-muted]">
+              <span class="figures text-[14px] text-muted">
                 km {(wp.cumDistM / 1000).toFixed(1)}
                 {wp.eleM !== null ? ` · ${Math.round(wp.eleM)} m` : ''}
               </span>
@@ -496,14 +496,14 @@ function Timeline(props: {
             {ws.length ? (
               <div class="flex flex-wrap gap-x-3 gap-y-1 pl-[74px]">
                 {ws.map((w) => (
-                  <span key={w.condition} class="text-[14px] font-medium text-[--color-warn]">
+                  <span key={w.condition} class="text-[14px] font-medium text-warn">
                     {conditionGlyph[w.condition]} {conditionLabel[w.condition]} ({w.detail})
                   </span>
                 ))}
               </div>
             ) : null}
             {met ? (
-              <p class="pl-[74px] text-[12px] text-[--color-muted]">
+              <p class="pl-[74px] text-[12px] text-muted">
                 MET: {met.tempC === null ? '—' : `${met.tempC.toFixed(0)} °C`}
                 {met.precipMm !== null ? `, ${met.precipMm.toFixed(1)} mm` : ''}
                 {disagree ? ' · sources disagree' : ''}
@@ -524,7 +524,7 @@ function CapabilityLine(props: {
   const denied =
     typeof Notification !== 'undefined' && Notification.permission === 'denied'
   return (
-    <p class="text-[14px] text-[--color-muted]">
+    <p class="text-[14px] text-muted">
       Warnings appear while wanderbar is open.
       {props.subscribed && props.schedule
         ? ` Background checks run every ${props.schedule.intervalH} h between ${pad(

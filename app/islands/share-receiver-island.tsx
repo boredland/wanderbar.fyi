@@ -37,7 +37,7 @@ export default function ShareReceiver() {
   if (!error) return <p>Adding your track…</p>
   return (
     <div class="flex flex-col gap-4">
-      <p class="text-[--color-warn]">{error}</p>
+      <p class="text-warn">{error}</p>
       <a class="underline" href="/">
         Back to wanderbar
       </a>

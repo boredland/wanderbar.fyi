@@ -54,13 +54,13 @@ export default function PositionButton() {
     <div class="flex flex-col gap-2">
       <button
         type="button"
-        class="min-h-[44px] rounded-[6px] border border-[--color-line] px-4 disabled:opacity-60"
+        class="min-h-[44px] rounded-[6px] border border-line px-4 disabled:opacity-60"
         disabled={busy}
         onClick={locate}
       >
         {busy ? 'Locating…' : 'Update my position'}
       </button>
-      {message ? <p class="text-[14px] text-[--color-muted]">{message}</p> : null}
+      {message ? <p class="text-[14px] text-muted">{message}</p> : null}
     </div>
   )
 }

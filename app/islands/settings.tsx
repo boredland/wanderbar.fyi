@@ -44,7 +44,7 @@ export default function Settings() {
       <span class="text-[14px]">{label}</span>
       <input
         type="number"
-        class="figures min-h-[44px] w-28 rounded-[6px] border border-[--color-line] px-3"
+        class="figures min-h-[44px] w-28 rounded-[6px] border border-line px-3"
         min={min}
         max={max}
         step={step}
@@ -76,7 +76,7 @@ export default function Settings() {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">Fire danger from</span>
         <select
-          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="min-h-[44px] rounded-[6px] border border-line px-3"
           disabled={!t.enabled.fire}
           value={t.fireDanger}
           onChange={(e) =>

@@ -124,7 +124,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">Every</span>
         <select
-          class="figures min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
           value={String(s.intervalH)}
           onChange={(e) => push({ ...s, intervalH: Number((e.target as HTMLSelectElement).value) })}
         >
@@ -139,7 +139,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">From</span>
         <select
-          class="figures min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
           value={String(s.startH)}
           onChange={(e) => push({ ...s, startH: Number((e.target as HTMLSelectElement).value) })}
         >
@@ -154,7 +154,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">To</span>
         <select
-          class="figures min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
           value={String(s.endH)}
           onChange={(e) => push({ ...s, endH: Number((e.target as HTMLSelectElement).value) })}
         >
@@ -167,20 +167,20 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       </label>
 
       {invalid ? (
-        <p class="text-[14px] text-[--color-warn]">
+        <p class="text-[14px] text-warn">
           The start hour must come before the end hour.
         </p>
       ) : null}
 
       <button
         type="button"
-        class="min-h-[44px] rounded-[6px] border border-[--color-line] px-4 disabled:opacity-60"
+        class="min-h-[44px] rounded-[6px] border border-line px-4 disabled:opacity-60"
         disabled={busy}
         onClick={enable}
       >
         {busy ? 'Enabling…' : 'Enable notifications'}
       </button>
-      {status ? <p class="text-[14px] text-[--color-muted]">{status}</p> : null}
+      {status ? <p class="text-[14px] text-muted">{status}</p> : null}
     </div>
   )
 }

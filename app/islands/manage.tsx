@@ -92,7 +92,7 @@ export default function Manage() {
   return (
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">
+        <span class="text-[14px] text-muted">
           {track.nameSource === 'user' ? 'Name' : 'Name this hike'}
         </span>
         <div class="flex gap-2">
@@ -100,11 +100,11 @@ export default function Manage() {
             type="text"
             value={name}
             onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            class="min-h-[44px] flex-1 rounded-[6px] border border-[--color-line] px-3 transition-[border-color] duration-150"
+            class="min-h-[44px] flex-1 rounded-[6px] border border-line px-3 transition-[border-color] duration-150"
           />
           <button
             type="button"
-            class="min-h-[44px] rounded-[6px] border border-[--color-line] px-4"
+            class="min-h-[44px] rounded-[6px] border border-line px-4"
             onClick={saveName}
           >
             Save
@@ -113,9 +113,9 @@ export default function Manage() {
       </label>
 
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Pace profile</span>
+        <span class="text-[14px] text-muted">Pace profile</span>
         <select
-          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="min-h-[44px] rounded-[6px] border border-line px-3"
           disabled={busy}
           value={track.profile}
           onChange={(e) =>
@@ -131,9 +131,9 @@ export default function Manage() {
       </label>
 
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Breaks</span>
+        <span class="text-[14px] text-muted">Breaks</span>
         <select
-          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          class="min-h-[44px] rounded-[6px] border border-line px-3"
           disabled={busy}
           value={track.rest}
           onChange={(e) =>
@@ -146,14 +146,14 @@ export default function Manage() {
             </option>
           ))}
         </select>
-        <span class="text-[12px] text-[--color-muted]">
+        <span class="text-[12px] text-muted">
           The pace standards count moving time only.
         </span>
       </label>
 
       <button
         type="button"
-        class="min-h-[44px] rounded-[6px] border border-[--color-warn] px-4 text-[--color-warn]"
+        class="min-h-[44px] rounded-[6px] border border-warn px-4 text-warn"
         onClick={remove}
       >
         Delete this track
