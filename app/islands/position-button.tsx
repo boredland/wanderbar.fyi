@@ -29,9 +29,6 @@ export default function PositionButton() {
             snappedSeq: snapped.seq,
             snappedDistM: snapped.distM
           })
-          if (track.startedAt === null) {
-            await set('track', { ...track, startedAt: Date.now() })
-          }
           if (snapped.distM > 5000) setMessage('You appear to be >5 km off this track.')
           const kmBySeq: Record<number, number> = {}
           for (const w of track.waypoints) kmBySeq[w.seq] = w.cumDistM / 1000
@@ -47,7 +44,7 @@ export default function PositionButton() {
       },
       () => {
         setBusy(false)
-        setMessage('Position unavailable — using planned pace.')
+        setMessage('Position unavailable, using planned pace.')
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )

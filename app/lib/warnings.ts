@@ -55,7 +55,8 @@ export function evaluateWarnings(
   forecast: WaypointForecast[],
   waypoints: Waypoint[],
   currentSeq: number,
-  now: number,
+  /** Absolute time of etaOffsetS === 0; see startAnchorMs in ./track. */
+  anchorMs: number,
   metExtras: Record<number, MetExtras> = {}
 ): Warning[] {
   const bySeq = new Map(waypoints.map((w) => [w.seq, w]))
@@ -64,7 +65,7 @@ export function evaluateWarnings(
   for (const wf of forecast) {
     const wp = bySeq.get(wf.seq)
     if (!wp || wp.seq < currentSeq) continue
-    const etaMs = now + wp.etaOffsetS * 1000
+    const etaMs = anchorMs + wp.etaOffsetS * 1000
 
     for (const h of wf.hours) {
       if (Math.abs(h.t - etaMs) > ETA_WINDOW_MS) continue

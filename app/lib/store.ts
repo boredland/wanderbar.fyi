@@ -14,7 +14,11 @@ export type Track = {
   lengthM: number
   ascentM: number
   eleSource: 'gpx' | 'dem' | 'none'
-  startedAt: number | null
+  /**
+   * Planned start, epoch ms; may be in the future. Null means "assume now".
+   * A measured fix overrides it; see startAnchorMs.
+   */
+  startAt: number | null
   addedAt: number
 }
 

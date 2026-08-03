@@ -1,5 +1,5 @@
 import { get, set } from './store'
-import { estimatePosition } from './track'
+import { estimatePosition, startAnchorMs } from './track'
 import { diffWarnings, evaluateWarnings, type Delta, type MetExtras } from './warnings'
 import { fetchMet, fetchOpenMeteo, type Hour } from './weather'
 
@@ -14,7 +14,8 @@ export async function syncNow(): Promise<Delta> {
   if (!track) return EMPTY
 
   const now = Date.now()
-  const currentSeq = estimatePosition(track.waypoints, fix, track.startedAt, now)
+  const anchorMs = startAnchorMs(track.waypoints, fix, track.startAt, now)
+  const currentSeq = estimatePosition(track.waypoints, fix, track.startAt, now)
   const remaining = track.waypoints.filter((w) => w.seq >= currentSeq)
   if (remaining.length === 0) {
     await set('forecast', null)
@@ -22,8 +23,8 @@ export async function syncNow(): Promise<Delta> {
   }
 
   try {
-    const maxEta = remaining[remaining.length - 1].etaOffsetS
-    const days = Math.min(16, Math.max(1, Math.ceil(maxEta / 86400) + 1))
+    const finishMs = anchorMs + remaining[remaining.length - 1].etaOffsetS * 1000
+    const days = Math.min(16, Math.max(1, Math.ceil((finishMs - now) / 86400_000) + 1))
     const waypoints = await fetchOpenMeteo(remaining, days)
 
     // MET is a display-only cross-check, never a gate: rejections are ignored.
@@ -49,7 +50,7 @@ export async function syncNow(): Promise<Delta> {
       waypoints,
       track.waypoints,
       currentSeq,
-      now,
+      anchorMs,
       metExtras
     )
     const prev = (await get('forecast'))?.warnings ?? []

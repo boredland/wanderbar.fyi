@@ -5,6 +5,7 @@ import {
   bboxOf,
   estimatePosition,
   haversineM,
+  startAnchorMs,
   paceTime,
   resample,
   simplifyForMap,
@@ -105,13 +106,66 @@ describe('estimatePosition', () => {
     expect(estimatePosition(wps, { at: now - 90 * 60_000, snappedSeq: 0 }, null, now)).toBe(1)
   })
 
-  it('falls back to startedAt when there is no fix', () => {
+  it('falls back to the planned start when there is no fix', () => {
     const now = 1_800_000_000_000
     expect(estimatePosition(wps, null, now - 2 * 3600_000, now)).toBe(2)
   })
 
   it('returns 0 with neither fix nor start', () => {
     expect(estimatePosition(wps, null, null, Date.now())).toBe(0)
+  })
+})
+
+describe('startAnchorMs', () => {
+  const wps: Waypoint[] = [0, 3600, 7200].map((etaOffsetS, seq) => ({
+    seq,
+    lat: 0,
+    lon: 0,
+    eleM: null,
+    cumDistM: seq * 1000,
+    cumAscentM: 0,
+    etaOffsetS
+  }))
+  const NOW = 1_800_000_000_000
+
+  it('anchors to a planned start, even one days away', () => {
+    const monday = NOW + 3 * 86400_000
+    expect(startAnchorMs(wps, null, monday, NOW)).toBe(monday)
+  })
+
+  it('assumes now when no start is set', () => {
+    expect(startAnchorMs(wps, null, null, NOW)).toBe(NOW)
+  })
+
+  it('lets a measured fix override the planned start', () => {
+    // Fix taken at waypoint 1 (eta 3600 s), so the hike effectively began an
+    // hour before the fix, regardless of what the user planned.
+    const fixAt = NOW - 600_000
+    const planned = NOW - 5 * 86400_000
+    expect(startAnchorMs(wps, { at: fixAt, snappedSeq: 1 }, planned, NOW)).toBe(
+      fixAt - 3600_000
+    )
+  })
+})
+
+describe('estimatePosition with a planned start', () => {
+  const wps: Waypoint[] = [0, 3600, 7200].map((etaOffsetS, seq) => ({
+    seq,
+    lat: 0,
+    lon: 0,
+    eleM: null,
+    cumDistM: seq * 1000,
+    cumAscentM: 0,
+    etaOffsetS
+  }))
+  const NOW = 1_800_000_000_000
+
+  it('stays at the trailhead before a future start', () => {
+    expect(estimatePosition(wps, null, NOW + 86400_000, NOW)).toBe(0)
+  })
+
+  it('advances once a past start has elapsed', () => {
+    expect(estimatePosition(wps, null, NOW - 90 * 60_000, NOW)).toBe(1)
   })
 })
 

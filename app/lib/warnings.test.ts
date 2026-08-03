@@ -97,6 +97,21 @@ describe('evaluateWarnings', () => {
   })
 })
 
+describe('warning windows follow the start anchor', () => {
+  it('matches the hour at the planned start, not the hour at now', () => {
+    const tomorrow = NOW + 86400_000
+    const gusty = hour({ t: tomorrow, gustKmh: 80 })
+    // Anchored to tomorrow, that hour lines up with the waypoint's ETA.
+    expect(
+      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(gusty), [wp(0, 0)], 0, tomorrow)
+    ).toHaveLength(1)
+    // Anchored to now, the same hour is a day away and must not fire.
+    expect(
+      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(gusty), [wp(0, 0)], 0, NOW)
+    ).toHaveLength(0)
+  })
+})
+
 describe('diffWarnings', () => {
   const w = (seq: number, condition: Condition, forecastHour = NOW): Warning => ({
     seq,

@@ -3,6 +3,12 @@ import { ingestGpx } from '../lib/ingest'
 import { get } from '../lib/store'
 import { PROFILES, type ProfileId } from '../lib/track'
 
+const startMs = (value: string) => {
+  if (!value) return null
+  const ms = new Date(value).getTime()
+  return Number.isFinite(ms) ? ms : null
+}
+
 export default function Upload(props: { shareError?: string }) {
   const [error, setError] = useState<string | null>(props.shareError ?? null)
   const [busy, setBusy] = useState(false)
@@ -23,7 +29,8 @@ export default function Upload(props: { shareError?: string }) {
         xml: await file.text(),
         name: String(data.get('name') ?? ''),
         fallbackName: file.name,
-        profile: (String(data.get('profile')) as ProfileId) || 'hiking'
+        profile: (String(data.get('profile')) as ProfileId) || 'hiking',
+        startAt: startMs(String(data.get('startAt') ?? ''))
       })
       if (!result.ok) setError(result.error)
       else dispatchEvent(new Event('wanderbar:changed'))
@@ -52,6 +59,14 @@ export default function Upload(props: { shareError?: string }) {
           type="text"
           name="name"
           class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+        />
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="text-[14px] text-[--color-muted]">Start (optional, defaults to now)</span>
+        <input
+          type="datetime-local"
+          name="startAt"
+          class="figures min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
         />
       </label>
       <label class="flex flex-col gap-2">

@@ -6,7 +6,7 @@ import { syncNow } from '../lib/sync'
 import type { Waypoint } from '../lib/track'
 import type { Hour } from '../lib/weather'
 import type { Warning } from '../lib/warnings'
-import { estimatePosition } from '../lib/track'
+import { estimatePosition, startAnchorMs } from '../lib/track'
 import TrackMap from './track-map'
 
 const STALE_MS = 2 * 3600_000
@@ -15,6 +15,18 @@ const REFRESH_MS = 30 * 60_000
 
 const clock = (ms: number) =>
   new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+/** Times more than a day out need their date, or "07:00" is ambiguous. */
+const dayTime = (ms: number, now: number) => {
+  const sameDay = new Date(ms).toDateString() === new Date(now).toDateString()
+  return sameDay
+    ? clock(ms)
+    : new Date(ms).toLocaleString([], {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+}
 
 const nearestHour = (hours: Hour[], t: number): Hour | null => {
   let best: Hour | null = null
@@ -101,13 +113,13 @@ export default function TrackView() {
   if (!loaded) return <div class="py-6 text-[--color-muted]">Loading…</div>
   if (!track) return null
 
-  const currentSeq = estimatePosition(track.waypoints, fix, track.startedAt, now)
+  const currentSeq = estimatePosition(track.waypoints, fix, track.startAt, now)
+  const anchorMs = startAnchorMs(track.waypoints, fix, track.startAt, now)
   const remaining = track.waypoints.filter((w) => w.seq >= currentSeq)
   const warningsBySeq: Record<number, Warning[]> = {}
   for (const w of forecast?.warnings ?? []) (warningsBySeq[w.seq] ??= []).push(w)
 
   const done = remaining.length === 0
-  const baseEta = track.waypoints[currentSeq]?.etaOffsetS ?? 0
   const totalS = track.waypoints[track.waypoints.length - 1]?.etaOffsetS ?? 0
 
   return (
@@ -117,11 +129,17 @@ export default function TrackView() {
         forecast={forecast}
         remaining={remaining}
         warningsBySeq={warningsBySeq}
+        anchorMs={anchorMs}
         now={now}
-        baseEta={baseEta}
       />
 
-      <PositionLine track={track} fix={fix} currentSeq={currentSeq} now={now} />
+      <PositionLine
+        track={track}
+        fix={fix}
+        currentSeq={currentSeq}
+        now={now}
+        anchorMs={anchorMs}
+      />
 
       <FreshnessRow
         forecast={forecast}
@@ -140,7 +158,7 @@ export default function TrackView() {
         <p class="text-[16px]">This hike is done.</p>
       ) : forecast === null ? (
         <p class="text-[16px] text-[--color-muted]">
-          Fetching the forecast — reload in a moment.
+          Fetching the forecast, reload in a moment.
         </p>
       ) : null}
 
@@ -148,8 +166,8 @@ export default function TrackView() {
         remaining={remaining}
         forecast={forecast}
         warningsBySeq={warningsBySeq}
+        anchorMs={anchorMs}
         now={now}
-        baseEta={baseEta}
       />
 
       <TrackMap
@@ -159,8 +177,7 @@ export default function TrackView() {
         currentSeq={currentSeq}
         warningsBySeq={warningsBySeq}
         forecast={forecast}
-        now={now}
-        baseEta={baseEta}
+        anchorMs={anchorMs}
       />
 
       <CapabilityLine subscribed={subscribed} schedule={schedule} />
@@ -185,8 +202,8 @@ function Verdict(props: {
   forecast: Forecast | null
   remaining: Waypoint[]
   warningsBySeq: Record<number, Warning[]>
+  anchorMs: number
   now: number
-  baseEta: number
 }) {
   if (props.done) return <p class="text-[28px] font-bold">This hike is done.</p>
   if (!props.forecast) {
@@ -206,10 +223,10 @@ function Verdict(props: {
       <p class="text-[28px] font-bold text-[--color-clear]">No un-wanderbar weather ahead.</p>
     )
   }
-  const at = props.now + (first.wp.etaOffsetS - props.baseEta) * 1000
+  const at = props.anchorMs + first.wp.etaOffsetS * 1000
   return (
     <p class="text-[28px] font-bold">
-      Clear until <span class="figures">{clock(at)}</span>, then{' '}
+      Clear until <span class="figures">{dayTime(at, props.now)}</span>, then{' '}
       <span class="text-[--color-warn]">
         {conditionGlyph[first.w.condition]} {conditionLabel[first.w.condition].toLowerCase()}
       </span>{' '}
@@ -223,17 +240,29 @@ function PositionLine(props: {
   fix: Fix | null
   currentSeq: number
   now: number
+  anchorMs: number
 }) {
   const km = (props.track.waypoints[props.currentSeq]?.cumDistM ?? 0) / 1000
   if (!props.fix) {
-    return <p class="text-[14px] text-[--color-muted]">Times assume you start now.</p>
+    // Honesty rule: say which assumption the times rest on.
+    if (props.track.startAt === null) {
+      return <p class="text-[14px] text-[--color-muted]">Times assume you start now.</p>
+    }
+    const started = props.anchorMs <= props.now
+    return (
+      <p class="text-[14px] text-[--color-muted]">
+        {started ? 'Started' : 'Starting'}{' '}
+        <span class="figures">{dayTime(props.anchorMs, props.now)}</span>
+        {started ? ' (no position yet, times assume you kept pace)' : ''}
+      </p>
+    )
   }
   const measured = props.currentSeq === props.fix.snappedSeq
   const age = props.now - props.fix.at
   const fixKm = (props.track.waypoints[props.fix.snappedSeq]?.cumDistM ?? 0) / 1000
-  const stale = age > OLD_FIX_MS ? ' — your position may be well off' : ''
+  const stale = age > OLD_FIX_MS ? ', your position may be well off' : ''
   const offTrack =
-    props.fix.snappedDistM > 5000 ? ' — you appear to be >5 km off this track' : ''
+    props.fix.snappedDistM > 5000 ? ', you appear to be >5 km off this track' : ''
   return (
     <p class="text-[14px] text-[--color-muted]">
       {measured ? (
@@ -243,7 +272,7 @@ function PositionLine(props: {
         </>
       ) : (
         <>
-          ≈ <span class="figures">km {km.toFixed(1)}</span> — estimated from your{' '}
+          ≈ <span class="figures">km {km.toFixed(1)}</span>, estimated from your{' '}
           <span class="figures">{clock(props.fix.at)}</span> position
         </>
       )}
@@ -289,8 +318,8 @@ function Timeline(props: {
   remaining: Waypoint[]
   forecast: Forecast | null
   warningsBySeq: Record<number, Warning[]>
+  anchorMs: number
   now: number
-  baseEta: number
 }) {
   if (props.remaining.length === 0) return null
   const bySeq: Record<number, Hour[]> = {}
@@ -299,7 +328,7 @@ function Timeline(props: {
   return (
     <ol>
       {props.remaining.map((wp, i) => {
-        const at = props.now + (wp.etaOffsetS - props.baseEta) * 1000
+        const at = props.anchorMs + wp.etaOffsetS * 1000
         const hour = nearestHour(bySeq[wp.seq] ?? [], at)
         const ws = props.warningsBySeq[wp.seq] ?? []
         const metHours = props.forecast?.met[wp.seq]
@@ -322,7 +351,7 @@ function Timeline(props: {
             }`}
           >
             <div class="flex items-center gap-3">
-              <span class="figures text-[16px] font-medium">{clock(at)}</span>
+              <span class="figures text-[16px] font-medium">{dayTime(at, props.now)}</span>
               <span class="figures text-[14px] text-[--color-muted]">
                 km {(wp.cumDistM / 1000).toFixed(1)}
               </span>

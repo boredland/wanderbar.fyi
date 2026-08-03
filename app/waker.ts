@@ -39,7 +39,7 @@ const scheduleOf = (r: Row): Schedule => ({
 
 /**
  * The only server state: one push subscription plus one schedule. It holds no
- * waypoints, thresholds or forecasts and cannot compute a warning — the
+ * waypoints, thresholds or forecasts and cannot compute a warning. The
  * service worker does that after being woken.
  */
 export class Waker implements DurableObject {

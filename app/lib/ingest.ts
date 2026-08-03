@@ -15,6 +15,7 @@ export async function ingestGpx(input: {
   shareTitle?: string
   fallbackName?: string
   profile: ProfileId
+  startAt?: number | null
 }): Promise<IngestResult> {
   let parsed
   try {
@@ -84,7 +85,7 @@ export async function ingestGpx(input: {
     lengthM: last.cumDistM,
     ascentM: last.cumAscentM,
     eleSource,
-    startedAt: null,
+    startAt: input.startAt ?? null,
     addedAt: Date.now()
   }
 

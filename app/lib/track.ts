@@ -210,25 +210,40 @@ export function snapToTrack(
   return best
 }
 
+/**
+ * The absolute time at which `etaOffsetS === 0`, i.e. the track's start.
+ * Every displayed time and every warning window is `anchor + etaOffsetS`, so
+ * this is the single place that decides what "now" means for a track.
+ *
+ * A measured fix wins: it is the only evidence of real progress. Otherwise the
+ * user's chosen start is used, which may be in the future for a planned hike.
+ * With neither, times assume the hiker leaves now.
+ */
+export function startAnchorMs(
+  wps: Waypoint[],
+  lastFix: { at: number; snappedSeq: number } | null,
+  startAt: number | null,
+  now: number
+): number {
+  if (lastFix) {
+    const reached = wps[Math.min(lastFix.snappedSeq, wps.length - 1)]?.etaOffsetS ?? 0
+    return lastFix.at - reached * 1000
+  }
+  return startAt ?? now
+}
+
+/** Waypoint index the hiker has reached; 0 before a planned start. */
 export function estimatePosition(
   wps: Waypoint[],
   lastFix: { at: number; snappedSeq: number } | null,
-  startedAt: number | null,
+  startAt: number | null,
   now: number
 ): number {
   if (wps.length === 0) return 0
-  let elapsedFrom: number
-  if (lastFix) {
-    const base = wps[Math.min(lastFix.snappedSeq, wps.length - 1)]?.etaOffsetS ?? 0
-    elapsedFrom = base + (now - lastFix.at) / 1000
-  } else if (startedAt !== null) {
-    elapsedFrom = (now - startedAt) / 1000
-  } else {
-    return 0
-  }
+  const elapsedS = (now - startAnchorMs(wps, lastFix, startAt, now)) / 1000
   let seq = 0
   for (const w of wps) {
-    if (w.etaOffsetS <= elapsedFrom) seq = w.seq
+    if (w.etaOffsetS <= elapsedS) seq = w.seq
     else break
   }
   return Math.min(seq, wps.length - 1)

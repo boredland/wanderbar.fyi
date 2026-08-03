@@ -20,8 +20,7 @@ type Props = {
   currentSeq: number
   warningsBySeq: Record<number, Warning[]>
   forecast: Forecast | null
-  now: number
-  baseEta: number
+  anchorMs: number
 }
 
 export default function TrackMap(props: Props) {
@@ -69,7 +68,7 @@ export default function TrackMap(props: Props) {
       for (const wf of props.forecast?.waypoints ?? []) hoursBySeq[wf.seq] = wf.hours
 
       for (const wp of props.remaining) {
-        const at = props.now + (wp.etaOffsetS - props.baseEta) * 1000
+        const at = props.anchorMs + wp.etaOffsetS * 1000
         const hours = hoursBySeq[wp.seq] ?? []
         let hour: Hour | null = null
         let gap = Infinity

@@ -30,7 +30,7 @@
   },
   /**
    * The only stateful resource: one push subscription plus one whole-hour
-   * schedule. No D1, KV, R2, queues or cron — the DO's own alarm replaces them.
+   * schedule. No D1, KV, R2, queues or cron; the DO's own alarm replaces them.
    */
   "durable_objects": {
     "bindings": [
@@ -55,5 +55,5 @@
   }
   // VAPID_PRIVATE_KEY is a secret (the JWK `d` scalar, not pkcs8):
   //   npx wrangler secret put VAPID_PRIVATE_KEY
-  // Locally it comes from .dev.vars — see .dev.vars.example.
+  // Locally it comes from .dev.vars; see .dev.vars.example.
 }
