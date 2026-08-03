@@ -56,6 +56,15 @@ export default createRoute((c) => {
       </details>
 
       <footer class="flex flex-col gap-3 border-t border-line pt-4 text-[12px] text-muted">
+        <p class="rounded-[6px] border-l-[3px] border-warn bg-raised px-3 py-2 text-[14px]">
+          <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The
+          data comes from public models and can be wrong, late or missing, and mountain
+          weather turns faster than any forecast follows. Always check local sources too
+          where you can: the local avalanche or weather service, the hut warden, the
+          valley station. Treat wanderbar as one input to your own judgement, never as a
+          reason to set out.
+        </p>
+
         <details>
           <summary class="min-h-[44px] cursor-pointer py-2">Where the data comes from</summary>
           <dl class="flex flex-col gap-3 pt-2 text-muted">

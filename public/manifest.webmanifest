@@ -1,8 +1,13 @@
 {
   "name": "wanderbar",
   "short_name": "wanderbar",
-  "description": "Weather warnings for the rest of your hike: one GPX track, a pace-based ETA, and a nudge only when conditions change.",
-  "categories": ["navigation", "travel", "utilities", "weather"],
+  "description": "Weather warnings for the rest of your hike: one GPX track, a pace-based ETA, and a nudge only when conditions change. Best-effort forecasts from public models; always check local information too.",
+  "categories": [
+    "navigation",
+    "travel",
+    "utilities",
+    "weather"
+  ],
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
@@ -12,12 +17,37 @@
   "background_color": "#ffffff",
   "theme_color": "#f97316",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
-  "launch_handler": { "client_mode": ["focus-existing", "navigate-existing"] },
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "navigate-existing"
+    ]
+  },
   "share_target": {
     "action": "/api/share",
     "method": "POST",
@@ -27,7 +57,13 @@
       "files": [
         {
           "name": "gpx",
-          "accept": ["application/gpx+xml", "application/xml", "text/xml", "application/octet-stream", ".gpx"]
+          "accept": [
+            "application/gpx+xml",
+            "application/xml",
+            "text/xml",
+            "application/octet-stream",
+            ".gpx"
+          ]
         }
       ]
     }
