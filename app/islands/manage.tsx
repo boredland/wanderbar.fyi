@@ -7,11 +7,6 @@ import { parseGpx } from '../lib/gpx'
 
 const changed = () => dispatchEvent(new Event('wanderbar:changed'))
 
-/** `datetime-local` speaks local wall clock; toISOString would shift by the offset. */
-const toLocalInput = (ms: number) => {
-  const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60_000)
-  return d.toISOString().slice(0, 16)
-}
 
 export default function Manage() {
   const [track, setTrack] = useState<Track | null>(null)
@@ -85,47 +80,9 @@ export default function Manage() {
     changed()
   }
 
-  const setStart = async (value: string) => {
-    const ms = value ? new Date(value).getTime() : null
-    await set('track', { ...track, startAt: Number.isFinite(ms) ? ms : null })
-    // Changed ETAs move the ±1 h warning windows, so the forecast must resync.
-    const kmBySeq: Record<number, number> = {}
-    for (const w of track.waypoints) kmBySeq[w.seq] = w.cumDistM / 1000
-    try {
-      await notifyDelta(await syncNow(), kmBySeq)
-    } catch {
-      // The freshness row surfaces the failure.
-    }
-    await reload()
-    changed()
-  }
 
   return (
     <div class="flex flex-col gap-4">
-      <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Start</span>
-        <div class="flex flex-wrap gap-2">
-          <input
-            type="datetime-local"
-            class="figures min-h-[44px] flex-1 rounded-[6px] border border-[--color-line] px-3"
-            value={track.startAt === null ? '' : toLocalInput(track.startAt)}
-            onChange={(e) => setStart((e.target as HTMLInputElement).value)}
-          />
-          <button
-            type="button"
-            class="min-h-[44px] rounded-[6px] border border-[--color-line] px-4"
-            onClick={() => setStart('')}
-          >
-            Now
-          </button>
-        </div>
-        <span class="text-[12px] text-[--color-muted]">
-          {track.startAt === null
-            ? 'Times assume you set off now.'
-            : 'A measured position overrides this.'}
-        </span>
-      </label>
-
       <label class="flex flex-col gap-2">
         <span class="text-[14px] text-[--color-muted]">
           {track.nameSource === 'user' ? 'Name' : 'Name this hike'}

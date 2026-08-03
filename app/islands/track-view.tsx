@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
 import { conditionGlyph, conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
 import { notifyDelta } from '../lib/notify'
-import { get, type Fix, type Forecast, type Track } from '../lib/store'
+import { get, set, type Fix, type Forecast, type Track } from '../lib/store'
 import { syncNow } from '../lib/sync'
 import type { Waypoint } from '../lib/track'
 import type { Hour } from '../lib/weather'
@@ -140,6 +140,8 @@ export default function TrackView() {
         now={now}
         anchorMs={anchorMs}
       />
+
+      <StartRow track={track} now={now} onChanged={refetch} />
 
       <FreshnessRow
         forecast={forecast}
@@ -321,6 +323,75 @@ function PositionLine(props: {
       {stale}
       {offTrack}
     </p>
+  )
+}
+
+/**
+ * Concrete whole-hour slots across Open-Meteo's 16-day range. A native select
+ * of real times beats a datetime-local here: no ambiguity about which day an
+ * hour belongs to, and one tap on a phone instead of spinning a date wheel.
+ */
+const START_SLOTS = 16 * 24
+
+function startOptions(now: number): { value: string; label: string }[] {
+  const out = [{ value: '', label: 'Now' }]
+  const first = new Date(now)
+  first.setMinutes(0, 0, 0)
+  first.setHours(first.getHours() + 1)
+  for (let i = 0; i < START_SLOTS; i++) {
+    const t = new Date(first.getTime() + i * 3600_000)
+    const days = Math.round(
+      (new Date(t).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000
+    )
+    const hh = `${String(t.getHours()).padStart(2, '0')}:00`
+    const day =
+      days === 0
+        ? 'Today'
+        : days === 1
+          ? 'Tomorrow'
+          : t.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+    out.push({ value: String(t.getTime()), label: `${day} ${hh}` })
+  }
+  return out
+}
+
+function StartRow(props: { track: Track; now: number; onChanged: () => void }) {
+  const options = startOptions(props.now)
+  // Snap the stored value to the nearest listed slot so the select shows it.
+  const current =
+    props.track.startAt === null
+      ? ''
+      : (options.find((o) => o.value === String(props.track.startAt))?.value ??
+        String(props.track.startAt))
+
+  const choose = async (value: string) => {
+    const ms = value ? Number(value) : null
+    await set('track', { ...props.track, startAt: ms })
+    // Changed ETAs move the warning windows, so the forecast must resync.
+    props.onChanged()
+    dispatchEvent(new Event('wanderbar:changed'))
+  }
+
+  return (
+    <label class="flex flex-wrap items-center gap-3">
+      <span class="text-[14px] text-[--color-muted]">Starting</span>
+      <select
+        class="figures min-h-[44px] rounded-[6px] border border-[--color-line] bg-[--color-surface] px-3 font-medium"
+        value={current}
+        onChange={(e) => choose((e.target as HTMLSelectElement).value)}
+      >
+        {current !== '' && !options.some((o) => o.value === current) ? (
+          <option value={current} selected>
+            {dayTime(Number(current), props.now)}
+          </option>
+        ) : null}
+        {options.map((o) => (
+          <option key={o.value} value={o.value} selected={o.value === current}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

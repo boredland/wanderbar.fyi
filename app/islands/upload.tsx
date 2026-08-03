@@ -3,10 +3,29 @@ import { ingestGpx } from '../lib/ingest'
 import { get } from '../lib/store'
 import { PROFILES, type ProfileId } from '../lib/track'
 
-const startMs = (value: string) => {
-  if (!value) return null
-  const ms = new Date(value).getTime()
-  return Number.isFinite(ms) ? ms : null
+/** Whole-hour slots over Open-Meteo's 16-day range; see StartRow in track-view. */
+function startOptions(now: number) {
+  const out = [{ value: '', label: 'Now' }]
+  const first = new Date(now)
+  first.setMinutes(0, 0, 0)
+  first.setHours(first.getHours() + 1)
+  for (let i = 0; i < 16 * 24; i++) {
+    const t = new Date(first.getTime() + i * 3600_000)
+    const days = Math.round(
+      (new Date(t).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000
+    )
+    const day =
+      days === 0
+        ? 'Today'
+        : days === 1
+          ? 'Tomorrow'
+          : t.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+    out.push({
+      value: String(t.getTime()),
+      label: `${day} ${String(t.getHours()).padStart(2, '0')}:00`
+    })
+  }
+  return out
 }
 
 export default function Upload(props: { shareError?: string }) {
@@ -30,7 +49,7 @@ export default function Upload(props: { shareError?: string }) {
         name: String(data.get('name') ?? ''),
         fallbackName: file.name,
         profile: (String(data.get('profile')) as ProfileId) || 'hiking',
-        startAt: startMs(String(data.get('startAt') ?? ''))
+        startAt: data.get('startAt') ? Number(data.get('startAt')) : null
       })
       if (!result.ok) setError(result.error)
       else dispatchEvent(new Event('wanderbar:changed'))
@@ -62,12 +81,17 @@ export default function Upload(props: { shareError?: string }) {
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-[--color-muted]">Start (optional, defaults to now)</span>
-        <input
-          type="datetime-local"
+        <span class="text-[14px] text-[--color-muted]">Start</span>
+        <select
           name="startAt"
           class="figures min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
-        />
+        >
+          {startOptions(Date.now()).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
       </label>
       <label class="flex flex-col gap-2">
         <span class="text-[14px] text-[--color-muted]">Pace profile</span>
