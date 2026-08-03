@@ -243,6 +243,30 @@ describe('warning windows follow the start anchor', () => {
   })
 })
 
+describe('the warning baseline', () => {
+  const w = (seq: number, condition: Condition): Warning => ({
+    seq,
+    condition,
+    forecastHour: NOW,
+    detail: 'x'
+  })
+
+  it('treats an empty previous set as all-new, so a reset re-announces', () => {
+    // clearTrack() nulls the forecast, so the next sync sees prev = [].
+    // Everything genuinely dangerous on the new track must be reported.
+    const d = diffWarnings([], [w(1, 'rain'), w(4, 'thunderstorm')])
+    expect(d.worsened).toHaveLength(2)
+    expect(d.cleared).toHaveLength(0)
+  })
+
+  it('never reports the old track\'s warnings as cleared after a reset', () => {
+    // The danger of NOT resetting: warnings from a previous hike would show up
+    // as "cleared" on an unrelated track.
+    const oldTrack = [w(9, 'wind'), w(12, 'snow')]
+    expect(diffWarnings([], oldTrack).cleared).toHaveLength(0)
+  })
+})
+
 describe('diffWarnings', () => {
   const w = (seq: number, condition: Condition, forecastHour = NOW): Warning => ({
     seq,

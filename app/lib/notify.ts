@@ -19,6 +19,22 @@ function line(w: Warning, kmBySeq: Record<number, number>): string {
   return `${clock(w.forecastHour)} ${where}: ${conditionLabel[w.condition]} (${w.detail})`
 }
 
+/**
+ * Dismisses any warning notification still on screen. Called when the track
+ * changes: a lock-screen warning naming a hill you are no longer walking is
+ * worse than no warning, and the tag alone only replaces on the *next* notify.
+ */
+export async function clearNotifications(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return
+  try {
+    const reg = await navigator.serviceWorker.getRegistration()
+    if (!reg) return
+    for (const n of await reg.getNotifications({ tag: TAG })) n.close()
+  } catch {
+    // Not supported everywhere; a stale notification is not worth throwing over.
+  }
+}
+
 export async function notifyDelta(
   delta: Delta,
   kmBySeq: Record<number, number> = {}

@@ -1,3 +1,4 @@
+import { clearNotifications } from './notify'
 import { clearTrack, set, type Track } from './store'
 import { syncNow } from './sync'
 import { parseGpx } from './gpx'
@@ -100,7 +101,11 @@ export async function ingestGpx(input: {
     addedAt: Date.now()
   }
 
+  // A new track invalidates the warning baseline and any warning still on the
+  // lock screen: clearTrack nulls the forecast the diff compares against, and
+  // the old notification must not outlive the track it described.
   await clearTrack()
+  await clearNotifications()
   await set('track', track)
   try {
     await syncNow()

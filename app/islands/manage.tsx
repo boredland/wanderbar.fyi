@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
-import { notifyDelta } from '../lib/notify'
+import { clearNotifications, notifyDelta } from '../lib/notify'
 import { clearTrack, get, set, type Track } from '../lib/store'
 import { syncNow } from '../lib/sync'
 import {
@@ -80,6 +80,7 @@ export default function Manage() {
   const remove = async () => {
     if (!confirm(`Delete “${track.name}”?`)) return
     await clearTrack()
+    await clearNotifications()
     // A schedule with no track would wake the app to sync nothing.
     await fetch('/api/wake', { method: 'DELETE' })
     const schedule = await get('schedule')

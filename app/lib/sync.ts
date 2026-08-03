@@ -70,6 +70,12 @@ export async function syncNow(): Promise<Delta> {
       metExtras,
       fwiByDate
     )
+    // Fetching takes seconds, and the track can be replaced meanwhile. Writing
+    // this forecast onto a different track would attribute one hike's warnings
+    // to another, so a switch mid-flight discards the result instead.
+    const current = await get('track')
+    if (!current || current.addedAt !== track.addedAt) return EMPTY
+
     const prev = (await get('forecast'))?.warnings ?? []
     const delta = diffWarnings(prev, next)
 
