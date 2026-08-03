@@ -13,14 +13,14 @@ export default createRoute((c) => {
       <title>wanderbar</title>
       <header class="flex items-center gap-3">
         <img src="/icon.svg" width="32" height="32" alt="" class="rounded-[8px]" />
-        <h1 class="text-[20px] font-bold tracking-tight">wanderbar</h1>
+        <h1 class="text-lg font-bold tracking-tight">wanderbar</h1>
       </header>
 
       <TrackView />
 
       <details class="panel">
-        <summary class="text-[16px]">
-          <h2 class="text-[16px] font-medium">Add a track</h2>
+        <summary class="text-base">
+          <h2 class="text-base font-medium">New track</h2>
         </summary>
         <div class="p-4">
           <Upload shareError={shareError} />
@@ -28,8 +28,8 @@ export default createRoute((c) => {
       </details>
 
       <details class="panel">
-        <summary class="text-[16px]">
-          <h2 class="text-[16px] font-medium">This track</h2>
+        <summary class="text-base">
+          <h2 class="text-base font-medium">This track</h2>
         </summary>
         <div class="flex flex-col gap-4 p-4">
           <PositionButton />
@@ -38,8 +38,8 @@ export default createRoute((c) => {
       </details>
 
       <details class="panel">
-        <summary class="text-[16px]">
-          <h2 class="text-[16px] font-medium">Warning settings</h2>
+        <summary class="text-base">
+          <h2 class="text-base font-medium">Warning settings</h2>
         </summary>
         <div class="p-4">
           <Settings />
@@ -47,16 +47,16 @@ export default createRoute((c) => {
       </details>
 
       <details class="panel">
-        <summary class="text-[16px]">
-          <h2 class="text-[16px] font-medium">Background checks</h2>
+        <summary class="text-base">
+          <h2 class="text-base font-medium">Background checks</h2>
         </summary>
         <div class="p-4">
           <ScheduleSettings vapidPublicKey={c.env.VAPID_PUBLIC_KEY} />
         </div>
       </details>
 
-      <footer class="flex flex-col gap-3 border-t border-line pt-4 text-[12px] text-muted">
-        <p class="rounded-[6px] border-l-[3px] border-warn bg-raised px-3 py-2 text-[14px]">
+      <footer class="flex flex-col gap-3 border-t border-line pt-4 text-xs text-muted">
+        <p class="rounded-[6px] border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
           <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The
           data comes from public models and can be wrong, late or missing, and mountain
           weather turns faster than any forecast follows. Always check local sources too

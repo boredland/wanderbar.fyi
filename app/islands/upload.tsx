@@ -64,7 +64,7 @@ export default function Upload(props: { shareError?: string }) {
   return (
     <form class="flex flex-col gap-4" onSubmit={onSubmit}>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">GPX track</span>
+        <span class="text-sm text-muted">GPX track</span>
         <input
           type="file"
           name="gpx"
@@ -74,7 +74,7 @@ export default function Upload(props: { shareError?: string }) {
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">Name (optional)</span>
+        <span class="text-sm text-muted">Name (optional)</span>
         <input
           type="text"
           name="name"
@@ -82,7 +82,7 @@ export default function Upload(props: { shareError?: string }) {
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">Start</span>
+        <span class="text-sm text-muted">Start</span>
         <select
           name="startAt"
           class="field figures"
@@ -95,7 +95,7 @@ export default function Upload(props: { shareError?: string }) {
         </select>
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">Pace profile</span>
+        <span class="text-sm text-muted">Pace profile</span>
         <select name="profile" class="field">
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
             <option key={id} value={id} selected={id === DEFAULT_PROFILE}>
@@ -105,7 +105,7 @@ export default function Upload(props: { shareError?: string }) {
         </select>
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">Breaks</span>
+        <span class="text-sm text-muted">Breaks</span>
         <select name="rest" class="field">
           {(Object.keys(REST_FACTORS) as RestId[]).map((id) => (
             <option key={id} value={id} selected={id === DEFAULT_REST}>
@@ -121,7 +121,7 @@ export default function Upload(props: { shareError?: string }) {
       >
         {busy ? 'Adding…' : 'Add track'}
       </button>
-      {error ? <p class="text-[14px] text-warn">{error}</p> : null}
+      {error ? <p class="text-sm text-warn">{error}</p> : null}
     </form>
   )
 }

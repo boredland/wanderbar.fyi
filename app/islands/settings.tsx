@@ -39,9 +39,16 @@ export default function Settings() {
     dispatchEvent(new Event('wanderbar:changed'))
   }, [])
 
-  const num = (key: 'heatC' | 'windKmh' | 'rainMm', label: string, min: number, max: number, step: number) => (
+  const num = (key: 'heatC' | 'windKmh' | 'rainMm', label: string, min: number, max: number, step: number) => {
+    const off = key === 'heatC' && !t.enabled.heat
+    return (
     <label class="flex items-center justify-between gap-4">
-      <span class="text-[14px]">{label}</span>
+      <span class="text-sm">
+        {label}
+        {off ? (
+          <span class="block text-xs text-muted">Enable Extreme heat to set this</span>
+        ) : null}
+      </span>
       <input
         type="number"
         class="field figures w-28"
@@ -49,11 +56,12 @@ export default function Settings() {
         max={max}
         step={step}
         value={t[key]}
-        disabled={key === 'heatC' && !t.enabled.heat}
+        disabled={off}
         onChange={(e) => persist({ ...t, [key]: Number((e.target as HTMLInputElement).value) })}
       />
     </label>
-  )
+    )
+  }
 
   return (
     <div class="flex flex-col gap-3">
@@ -69,11 +77,11 @@ export default function Settings() {
               })
             }
           />
-          <span class="text-[16px]">{conditionLabel[c]}</span>
+          <span class="text-base">{conditionLabel[c]}</span>
         </label>
       ))}
       <label class="flex items-center justify-between gap-4">
-        <span class="text-[14px]">Fire danger from</span>
+        <span class="text-sm">Fire danger from</span>
         <select
           class="field"
           disabled={!t.enabled.fire}

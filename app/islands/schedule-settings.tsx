@@ -117,11 +117,11 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
           checked={s.enabled}
           onChange={(e) => push({ ...s, enabled: (e.target as HTMLInputElement).checked })}
         />
-        <span class="text-[16px]">Check in the background</span>
+        <span class="text-base">Check in the background</span>
       </label>
 
       <label class="flex items-center justify-between gap-4">
-        <span class="text-[14px]">Every</span>
+        <span class="text-sm">Every</span>
         <select
           class="field figures"
           value={String(s.intervalH)}
@@ -136,7 +136,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       </label>
 
       <label class="flex items-center justify-between gap-4">
-        <span class="text-[14px]">From</span>
+        <span class="text-sm">From</span>
         <select
           class="field figures"
           value={String(s.startH)}
@@ -151,7 +151,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       </label>
 
       <label class="flex items-center justify-between gap-4">
-        <span class="text-[14px]">To</span>
+        <span class="text-sm">To</span>
         <select
           class="field figures"
           value={String(s.endH)}
@@ -166,7 +166,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       </label>
 
       {invalid ? (
-        <p class="text-[14px] text-warn">
+        <p class="text-sm text-warn">
           The start hour must come before the end hour.
         </p>
       ) : null}
@@ -179,7 +179,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       >
         {busy ? 'Enabling…' : 'Enable notifications'}
       </button>
-      {status ? <p class="text-[14px] text-muted">{status}</p> : null}
+      {status ? <p class="text-sm text-muted">{status}</p> : null}
     </div>
   )
 }

@@ -174,6 +174,35 @@ body {
 }
 
 /* Disclosure panels: one surface treatment, one hover, one cursor. */
+/*
+ * File inputs render a browser-native button that ignores .field entirely.
+ * Style the ::file-selector-button so it matches .btn instead of being the one
+ * control in the app that looks foreign.
+ */
+.field[type='file'] {
+  display: flex;
+  align-items: center;
+  padding-inline-start: 8px;
+}
+
+.field[type='file']::file-selector-button {
+  min-height: 32px;
+  margin-inline-end: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.field[type='file']:hover::file-selector-button {
+  background: var(--color-line);
+}
+
 .panel {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);

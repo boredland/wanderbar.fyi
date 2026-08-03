@@ -89,7 +89,7 @@ export default function Manage() {
   return (
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">
+        <span class="text-sm text-muted">
           {track.nameSource === 'user' ? 'Name' : 'Name this hike'}
         </span>
         <div class="flex gap-2">
@@ -110,7 +110,7 @@ export default function Manage() {
       </label>
 
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">Pace profile</span>
+        <span class="text-sm text-muted">Pace profile</span>
         <select
           class="field"
           disabled={busy}
@@ -128,7 +128,7 @@ export default function Manage() {
       </label>
 
       <label class="flex flex-col gap-2">
-        <span class="text-[14px] text-muted">Breaks</span>
+        <span class="text-sm text-muted">Breaks</span>
         <select
           class="field"
           disabled={busy}
@@ -143,7 +143,7 @@ export default function Manage() {
             </option>
           ))}
         </select>
-        <span class="text-[12px] text-muted">
+        <span class="text-xs text-muted">
           The pace standards count moving time only.
         </span>
       </label>

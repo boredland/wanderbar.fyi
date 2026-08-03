@@ -41,7 +41,9 @@ export default function TrackMap(props: Props) {
       const L = (await import('leaflet')).default
       if (cancelled || !el.current) return
 
-      const map = L.map(el.current)
+      // Keyboard users tabbed into the map before reaching any control, then
+      // spent 13 stops on markers. Popups stay reachable from the timeline.
+      const map = L.map(el.current, { keyboard: false })
       created = map
       mapRef.current = map
 
@@ -108,7 +110,12 @@ export default function TrackMap(props: Props) {
           ...ws.map((w) => `${conditionLabel[w.condition]} (${w.detail})`)
         ].filter(Boolean)
 
-        L.marker([wp.lat, wp.lon], { icon }).addTo(map).bindPopup(lines.join('<br>'))
+        // keyboard:false does not stop Leaflet giving every marker tabindex=0,
+        // which put 14 unlabelled stops in the tab order duplicating the
+        // timeline. The map is confirmation; the timeline is the content.
+        L.marker([wp.lat, wp.lon], { icon, keyboard: false })
+          .addTo(map)
+          .bindPopup(lines.join('<br>'))
       }
 
       const here = props.remaining[0]
@@ -142,5 +149,5 @@ export default function TrackMap(props: Props) {
       </div>
     )
   }
-  return <div ref={el} class="h-80 w-full rounded-[12px] shadow-[0_1px_3px_rgb(28_25_23/0.12)]" />
+  return <div ref={el} tabIndex={-1} class="h-80 w-full rounded-[12px] shadow-map" />
 }

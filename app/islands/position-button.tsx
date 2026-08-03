@@ -60,7 +60,7 @@ export default function PositionButton() {
       >
         {busy ? 'Locating…' : 'Update my position'}
       </button>
-      {message ? <p class="text-[14px] text-muted">{message}</p> : null}
+      {message ? <p class="text-sm text-muted">{message}</p> : null}
     </div>
   )
 }
