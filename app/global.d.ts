@@ -1,13 +1,11 @@
 import type {} from 'hono'
 
+/**
+ * Bindings are generated from wrangler.jsonc by `npm run cf-typegen`
+ * (worker-configuration.d.ts). Re-run it after changing bindings or vars.
+ */
 declare global {
-  type Bindings = {
-    WAKER: DurableObjectNamespace
-    MET_USER_AGENT: string
-    VAPID_SUBJECT: string
-    VAPID_PUBLIC_KEY: string
-    VAPID_PRIVATE_KEY: string
-  }
+  type Bindings = Env
 }
 
 declare module 'hono' {

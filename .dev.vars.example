@@ -1,0 +1,7 @@
+# The VAPID private key: the JWK `d` scalar (43 chars), NOT pkcs8.
+# Generate a keypair with:
+#   node -e "const kp=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);\
+#   console.log('public :', Buffer.from(await crypto.subtle.exportKey('raw',kp.publicKey)).toString('base64url'));\
+#   console.log('private:', (await crypto.subtle.exportKey('jwk',kp.privateKey)).d)" --input-type=module
+# Put the public key in wrangler.jsonc vars, the private one here.
+VAPID_PRIVATE_KEY=

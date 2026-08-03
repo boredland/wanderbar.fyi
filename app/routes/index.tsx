@@ -47,6 +47,12 @@ export default createRoute((c) => {
           <ScheduleSettings vapidPublicKey={c.env.VAPID_PUBLIC_KEY} />
         </div>
       </details>
+
+      <footer class="border-t border-[--color-line] pt-4 text-[12px] text-[--color-muted]">
+        <a class="underline" href="https://github.com/boredland/wanderbar.fyi">
+          Source on GitHub
+        </a>
+      </footer>
     </main>
   )
 })

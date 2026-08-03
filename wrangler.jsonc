@@ -1,3 +1,7 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "wanderbar",
@@ -6,9 +10,17 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
   "assets": {
     "directory": "./dist"
   },
+  /**
+   * The only stateful resource: one push subscription plus one whole-hour
+   * schedule. No D1, KV, R2, queues or cron — the DO's own alarm replaces them.
+   */
   "durable_objects": {
     "bindings": [
       {
@@ -30,4 +42,7 @@
     "VAPID_SUBJECT": "mailto:admin@wanderbar.fyi",
     "VAPID_PUBLIC_KEY": "BIV7EA_6_y2KIlijRyvNglkNZ1ISrdadrFDL8mdMy4m_x4mnz5ZyE76qv6oP2-C4c7kUfg3iJF3mi3qAIQd-52w"
   }
+  // VAPID_PRIVATE_KEY is a secret (the JWK `d` scalar, not pkcs8):
+  //   npx wrangler secret put VAPID_PRIVATE_KEY
+  // Locally it comes from .dev.vars — see .dev.vars.example.
 }
