@@ -230,11 +230,11 @@ export default function TrackView() {
 
       <p class="text-xs text-muted">
         Weather data by{' '}
-        <a class="underline" href="https://open-meteo.com/">
+        <a class="underline" rel="noopener noreferrer" href="https://open-meteo.com/">
           Open-Meteo.com
         </a>{' '}
         · Cross-check from the Norwegian Meteorological Institute / Yr · Weather icons ©{' '}
-        <a class="underline" href="https://github.com/metno/weathericons">
+        <a class="underline" rel="noopener noreferrer" href="https://github.com/metno/weathericons">
           MET Norway
         </a>{' '}
         (MIT)

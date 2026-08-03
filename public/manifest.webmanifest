@@ -42,6 +42,43 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/narrow-1-forecast.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The weather timeline for the rest of a hike, with the track's elevation profile beside it"
+    },
+    {
+      "src": "/screenshots/narrow-3-warning.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "A warning for the hours ahead, marked on the timeline where conditions turn"
+    },
+    {
+      "src": "/screenshots/narrow-2-map.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "The route on a topographic map, with weather at each waypoint"
+    },
+    {
+      "src": "/screenshots/wide-1-forecast.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The weather timeline for the rest of a hike, with the track's elevation profile beside it"
+    },
+    {
+      "src": "/screenshots/wide-2-map.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "The route on a topographic map, with weather at each waypoint"
+    }
+  ],
   "launch_handler": {
     "client_mode": [
       "focus-existing",

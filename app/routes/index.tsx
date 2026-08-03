@@ -10,7 +10,40 @@ export default createRoute((c) => {
   const shareError = c.req.query('shareError')
   return c.render(
     <main class="mx-auto flex max-w-2xl flex-col gap-6 p-4">
-      <title>wanderbar</title>
+      {/* The bare word "wanderbar" says nothing in a result list. */}
+      <title>wanderbar - weather for the rest of your hike</title>
+      {/*
+       * WebApplication, not SoftwareApplication: this is used in the browser and
+       * installed from it, and offers is required for a free listing to validate.
+       */}
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD has no JSX form.
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebApplication',
+            name: 'wanderbar',
+            url: 'https://wanderbar.fyi',
+            description:
+              'Weather warnings for the rest of your hike: one GPX track, a pace-based ETA, and a nudge only when conditions change.',
+            applicationCategory: 'TravelApplication',
+            browserRequirements: 'Requires JavaScript and a modern browser.',
+            operatingSystem: 'Any',
+            isAccessibleForFree: true,
+            offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+            featureList: [
+              'Weather along a GPX track, ordered by when you reach each point',
+              'Pace-based ETAs from published standards (DIN 33466, DAV, SAC)',
+              'Warnings only when conditions worsen or clear',
+              'Background checks on a schedule you choose',
+              'Works as an installable app'
+            ],
+            screenshot: 'https://wanderbar.fyi/screenshots/wide-1-forecast.png',
+            inLanguage: 'en'
+          })
+        }}
+      />
       <header class="graticule flex items-baseline gap-3 pb-3">
         <img src="/icon.svg" width="28" height="28" alt="" class="translate-y-1 rounded-[6px]" />
         <h1 class="display text-lg font-bold">wanderbar</h1>
@@ -75,7 +108,7 @@ export default createRoute((c) => {
               <dt class="font-medium text-ink">Forecast</dt>
               <dd>
                 Hourly temperature, precipitation, wind, gusts and weather codes from{' '}
-                <a class="underline" href="https://open-meteo.com/">
+                <a class="underline" rel="noopener noreferrer" href="https://open-meteo.com/">
                   Open-Meteo
                 </a>
                 , fetched by your device for each waypoint along the track. Open-Meteo
@@ -87,7 +120,7 @@ export default createRoute((c) => {
               <dt class="font-medium text-ink">Second opinion</dt>
               <dd>
                 A few checkpoints are cross-checked against the{' '}
-                <a class="underline" href="https://api.met.no/">
+                <a class="underline" rel="noopener noreferrer" href="https://api.met.no/">
                   Norwegian Meteorological Institute
                 </a>{' '}
                 (Yr). When the two disagree on temperature or rain, the timeline says so
@@ -135,11 +168,11 @@ export default createRoute((c) => {
               <dt class="font-medium text-ink">Map</dt>
               <dd>
                 Tiles by{' '}
-                <a class="underline" href="https://opentopomap.org">
+                <a class="underline" rel="noopener noreferrer" href="https://opentopomap.org">
                   OpenTopoMap
                 </a>{' '}
                 from OpenStreetMap data. Weather icons by{' '}
-                <a class="underline" href="https://github.com/metno/weathericons">
+                <a class="underline" rel="noopener noreferrer" href="https://github.com/metno/weathericons">
                   MET Norway
                 </a>{' '}
                 (MIT).
@@ -148,7 +181,7 @@ export default createRoute((c) => {
           </dl>
         </details>
 
-        <a class="underline" href="https://github.com/boredland/wanderbar.fyi">
+        <a class="underline" rel="noopener noreferrer" href="https://github.com/boredland/wanderbar.fyi">
           Source on GitHub
         </a>
       </footer>

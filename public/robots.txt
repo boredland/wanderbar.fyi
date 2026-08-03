@@ -1,0 +1,25 @@
+# wanderbar.fyi
+#
+# One indexable page. /api/* is a stateless MET proxy, a share-target endpoint and
+# a push-subscription store: nothing there has a document to index, and crawling
+# /api/met would burn the rate limit MET Norway's ToS grants this User-Agent.
+
+User-agent: *
+Disallow: /api/
+
+# AI crawlers are welcome on the page itself. The app's own reason to exist is
+# that it explains its data sources and limits in plain text, which is exactly
+# what these should quote.
+User-agent: GPTBot
+Disallow: /api/
+
+User-agent: ClaudeBot
+Disallow: /api/
+
+User-agent: PerplexityBot
+Disallow: /api/
+
+User-agent: Google-Extended
+Disallow: /api/
+
+Sitemap: https://wanderbar.fyi/sitemap.xml

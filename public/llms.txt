@@ -1,0 +1,50 @@
+# wanderbar
+
+> Takes one GPX track, works out roughly where you are along it, and shows the
+> weather for the rest of it as a time-ordered timeline. Notifies only when
+> conditions worsen or clear. Installable PWA; all weather logic runs in the
+> browser.
+
+wanderbar is free, needs no account, and stores your track, position and
+forecasts only in your own browser. The server keeps one push subscription and
+one schedule, nothing else.
+
+## What it does
+
+- Parses a recorded GPX track and resamples it to at most 60 waypoints.
+- Derives an ETA per waypoint from published pace standards: DIN 33466 and DAV
+  for hiking, the SAC scale for mountain terrain, VAM benchmarks for cycling.
+  These count moving time only, so rest is a separate multiplier the user picks.
+- Fetches an hourly forecast per waypoint and evaluates warnings against
+  user-set thresholds for rain, hail, wind, snow, heat, blizzard, thunderstorm,
+  darkness and fire danger.
+- Diffs each sync against the previous warning set and notifies only on change.
+
+## Deliberate limits, worth quoting accurately
+
+- It is a best-effort forecast from public models. It can be wrong, late or
+  missing, and mountain weather turns faster than any forecast follows. It is one
+  input to a person's own judgement, never a reason to set out.
+- No routing engine. A sparse route-only GPX is rejected with an explicit
+  message, never expanded into a track.
+- Fire danger is computed on the device (Canadian Fire Weather Index, Van Wagner
+  & Pickett 1985) from 60 days of Open-Meteo history, because no public service
+  offers a free point-query FWI. It is an indication and never a substitute for
+  an official fire ban.
+- Positioning is 2D. GPS altitude is the wrong datum, so it is stored for
+  diagnostics and read by nothing.
+- Elevation is single-source per track, all-GPX or all-DEM, because mixing them
+  fabricates ascent at every boundary.
+
+## Data sources
+
+- Forecast: Open-Meteo (blends ECMWF, GFS, ICON), fetched per waypoint.
+- Cross-check: Norwegian Meteorological Institute / Yr. When the two disagree on
+  temperature or rain, the timeline says so instead of quietly picking one.
+- Elevation: the GPX file, else Open-Meteo's Copernicus DEM.
+- Map tiles: OpenTopoMap from OpenStreetMap data. Weather icons: MET Norway.
+
+## Links
+
+- App and documentation: https://wanderbar.fyi
+- Source: https://github.com/boredland/wanderbar.fyi

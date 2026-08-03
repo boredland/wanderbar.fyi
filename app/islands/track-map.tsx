@@ -8,7 +8,7 @@ import type { Hour } from '../lib/weather'
 
 // A licence obligation, not decoration; do not shorten.
 const ATTRIBUTION =
-  'Kartendaten: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>, SRTM | Kartendarstellung: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+  'Kartendaten: © <a rel="noopener noreferrer" href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>, SRTM | Kartendarstellung: © <a rel="noopener noreferrer" href="https://opentopomap.org">OpenTopoMap</a> (<a rel="noopener noreferrer" href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
 
 // Route orange is a fill, never text: it is the app's mark and the line you
 // have left to walk. Behind you goes to the sheet's own contour grey.

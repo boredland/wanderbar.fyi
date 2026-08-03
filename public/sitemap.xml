@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  wanderbar has exactly one indexable URL. /api/* serves no documents and the
+  404/error routes are not canonical destinations, so this file stays a single
+  entry rather than being padded to look like a bigger site.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://wanderbar.fyi/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

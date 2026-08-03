@@ -106,6 +106,36 @@ lettering (`.eyebrow`) set in condensed Archivo.
   else on the page moves. `prefers-reduced-motion` disables it with
   `!important`, because component classes set their own transitions.
 
+## Discoverability
+
+One indexable URL, so the SEO surface is small and stays that way:
+
+- `public/robots.txt` blocks only `/api/*`. Nothing there has a document to
+  index, and crawling `/api/met` would burn the rate limit MET Norway's ToS
+  grants this User-Agent. Note `Allow: /` is deliberately absent: it is the
+  default anyway, and stating it defeats the `Disallow` under longest-match
+  precedence in strict parsers.
+- `public/sitemap.xml` lists the single page and is not padded to look larger.
+- `public/llms.txt` states the deliberate limits in the words we want quoted,
+  since the honest ones ("best-effort", "never a reason to set out", "FWI is an
+  indication, not a fire ban") are the ones that must survive summarisation.
+- `_renderer.tsx` owns canonical, Open Graph and Twitter tags from one set of
+  constants; `wanderbar.fyi` is load-bearing, not cosmetic (see wrangler.jsonc).
+- The homepage carries `WebApplication` JSON-LD. `offers` is required for a free
+  listing to validate.
+
+### Manifest screenshots
+
+`public/screenshots/` feeds Chrome's richer install UI. Chrome enforces:
+min 320px, max 3840px, aspect ratio ≤ 2.3:1, **and a single consistent aspect
+ratio per `form_factor`** — mixing ratios within one form factor silently
+disables the richer UI. Desktop needs at least one `wide`, Android at least one
+`narrow`, so both are present (1280×720 and 1080×1920, both 16:9).
+
+Regenerate by driving a real track through `wrangler dev`, not by scaling
+existing files: a screenshot must show real forecast data, and one of the narrow
+shots deliberately shows the *warned* state, which is what the app is for.
+
 ## Development
 
 ```bash
