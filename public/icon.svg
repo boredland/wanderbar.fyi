@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="wanderbar">
   <rect width="512" height="512" rx="112" fill="#f97316"/>
-  <circle cx="368" cy="150" r="46" fill="#fff"/>
-  <path d="M40 400L184 168l104 148 54-64 130 148z" fill="#1c1917"/>
-  <path d="M184 168l58 93-52 36-44-56z" fill="#fff" opacity=".85"/>
+  <circle cx="368" cy="150" r="46" fill="#eaede6"/>
+  <path d="M40 400L184 168l104 148 54-64 130 148z" fill="#1f2420"/>
+  <path d="M184 168l58 93-52 36-44-56z" fill="#eaede6" opacity=".85"/>
 </svg>

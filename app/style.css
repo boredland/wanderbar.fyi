@@ -1,23 +1,72 @@
 @import 'tailwindcss' source('../app');
 
+/*
+ * Self-hosted, latin-subset variable fonts. An installable PWA that is used on
+ * a mountain must not depend on a font CDN being reachable, and `display:swap`
+ * on a third-party host would reflow the verdict line at the worst moment.
+ *
+ * Archivo carries a width axis, which is what lets the margin lettering be
+ * genuinely condensed rather than letter-spaced. Atkinson Hyperlegible Next is
+ * drawn to disambiguate letterforms: this page is read in glare, in wind, tired,
+ * and reading 15° as 16° or 09:11 as 09:14 is a navigation error, not a typo.
+ */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-display: swap;
+  src: url('/fonts/archivo-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/fonts/atkinson-next-latin-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
-  --color-ink: #1c1917;
-  --color-muted: #57534e;
-  --color-line: #e7e5e4;
-  --color-surface: #ffffff;
-  --color-raised: #fafaf9;
-  --color-brand: #f97316;
-  --color-warn: #b91c1c;
-  --color-clear: #166534;
+  /*
+   * A topographic sheet, not a screen: warm grey-green paper, lighter cutouts,
+   * contour hairlines. Every text pair below clears WCAG AA on its own ground.
+   */
+  --color-surface: #eaede6;
+  --color-raised: #f6f7f3;
+  --color-line: #c9cfc2;
+  --color-ink: #1f2420;
+  --color-muted: #5c645b;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* The one accent. Deep alpine lake: calm, and "no warnings" reads as calm. */
+  --color-brand: #1d5b62;
+  --color-clear: #1d5b62;
 
-  --text-xs: 12px;
+  /* Oxide red, the colour a paper map uses for danger. */
+  --color-warn: #a32118;
+
+  /*
+   * Route orange is the app's mark and the map polyline. It is never text: on
+   * paper it measures 2.37:1. Fill only, always with ink on top (5.63:1).
+   */
+  --color-route: #f97316;
+
+  --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, sans-serif;
+
+  --text-2xs: 11px;
+  --text-xs: 12.5px;
   --text-sm: 14px;
   --text-base: 16px;
-  --text-lg: 20px;
-  --text-xl: 28px;
-  --text-2xl: 36px;
+  --text-lg: 19px;
+  --text-xl: 26px;
+  --text-2xl: 34px;
 
   --spacing-1: 4px;
   --spacing-2: 8px;
@@ -26,10 +75,9 @@
   --spacing-6: 24px;
   --spacing-10: 40px;
 
-  --radius-sm: 6px;
-  --radius-lg: 12px;
+  --radius-sm: 5px;
+  --radius-lg: 10px;
 
-  --shadow-map: 0 1px 3px rgb(28 25 23 / 0.12);
 }
 
 body {
@@ -37,39 +85,92 @@ body {
   color: var(--color-ink);
   background: var(--color-surface);
   font-size: var(--text-base);
+  -webkit-text-size-adjust: 100%;
 }
 
+/*
+ * Data is set in Archivo with tabular figures so a column of times, temperatures
+ * and distances stays in register as the values change on every sync.
+ */
 .figures {
+  font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/*
+ * Map-margin lettering: the one place the width axis earns its keep. Condensed
+ * and letter-spaced the way a sheet compresses names along a contour.
+ */
+.eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  font-stretch: 70%;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-stretch: 88%;
+  letter-spacing: -0.015em;
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
 
 /*
- * Timeline rows carry a terrain profile: the track's own elevation, drawn as a
- * ridge behind each row. It is the one thing that differs per row and that a
- * hiker already has a mental model for, so it gives the list shape without
- * adding a ninth colour or an idle animation.
+ * The sheet's graticule: a hairline with ticks at a fixed interval, the way a
+ * map edge is subdivided. Structural, and it is the only ornament on the page.
  */
-.ridge {
-  background: linear-gradient(to top, var(--color-line) 0 var(--ridge, 0%), transparent var(--ridge, 0%));
+.graticule {
+  border-bottom: 1px solid var(--color-line);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--color-line) 0 1px,
+    transparent 1px 40px
+  );
+  background-position: bottom left;
+  background-repeat: repeat-x;
+  background-size: 40px 5px;
 }
 
-/* Warned rows: a solid bar, not a hairline, so it survives bright sunlight. */
+/*
+ * The signature: the timeline's left gutter carries the track's own elevation
+ * profile. Each row renders exactly its own segment, spanning the row's full
+ * height, so consecutive segments tile into one continuous silhouette no matter
+ * how tall a row grows when warnings are added. Warned segments are hatched,
+ * which is how a paper map marks a hazard area.
+ */
+.profile {
+  width: 46px;
+  flex: none;
+  align-self: stretch;
+  border-right: 1px solid var(--color-line);
+}
+
+.profile svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .row-warn {
-  box-shadow: inset 3px 0 0 0 var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 5%, transparent);
 }
 
+/* Where you are now: a solid bar, the one thing that must survive glare. */
 .row-now {
   box-shadow: inset 3px 0 0 0 var(--color-brand);
 }
 
 /*
- * The verdict glyph sits in a filled disc. Brand orange fails AA for text but
- * is fine as a fill, and ink on orange measures 6.24:1.
+ * The verdict glyph. Ink on route orange measures 5.63:1, paper on lake 6.9:1,
+ * so the fill carries the colour and the glyph stays legible either way.
  */
 .disc {
   display: inline-flex;
@@ -78,19 +179,19 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 999px;
-  background: var(--color-brand);
+  background: var(--color-route);
   color: var(--color-ink);
   flex: none;
 }
 
 .disc-warn {
   background: var(--color-warn);
-  color: var(--color-surface);
+  color: var(--color-raised);
 }
 
 .disc-clear {
   background: var(--color-clear);
-  color: var(--color-surface);
+  color: var(--color-raised);
 }
 
 /*
@@ -107,10 +208,10 @@ body {
   padding: 0 16px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-line);
-  background: var(--color-surface);
+  background: var(--color-raised);
   color: var(--color-ink);
   font: inherit;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color 150ms ease-out,
@@ -119,7 +220,6 @@ body {
 }
 
 .btn:hover:not(:disabled) {
-  background: var(--color-raised);
   border-color: var(--color-muted);
 }
 
@@ -136,12 +236,12 @@ body {
 .btn-primary {
   background: var(--color-brand);
   border-color: var(--color-brand);
-  color: var(--color-ink);
+  color: var(--color-raised);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #ea6a0c;
-  border-color: #ea6a0c;
+  background: #17484e;
+  border-color: #17484e;
 }
 
 .btn-danger {
@@ -150,7 +250,7 @@ body {
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #fef2f2;
+  background: color-mix(in srgb, var(--color-warn) 8%, transparent);
 }
 
 .field {
@@ -158,7 +258,7 @@ body {
   padding: 0 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-line);
-  background: var(--color-surface);
+  background: var(--color-raised);
   color: var(--color-ink);
   font: inherit;
   transition: border-color 150ms ease-out;
@@ -173,7 +273,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Disclosure panels: one surface treatment, one hover, one cursor. */
 /*
  * File inputs render a browser-native button that ignores .field entirely.
  * Style the ::file-selector-button so it matches .btn instead of being the one
@@ -191,10 +290,10 @@ body {
   padding: 0 12px;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-sm);
-  background: var(--color-raised);
+  background: var(--color-surface);
   color: var(--color-ink);
   font: inherit;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color 150ms ease-out;
 }
@@ -203,10 +302,11 @@ body {
   background: var(--color-line);
 }
 
+/* Disclosure panels: one surface treatment, one hover, one cursor. */
 .panel {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-raised);
 }
 
 .panel > summary {
@@ -216,12 +316,11 @@ body {
   padding: 12px 16px;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  font-weight: 500;
   transition: background-color 150ms ease-out;
 }
 
 .panel > summary:hover {
-  background: var(--color-raised);
+  background: var(--color-surface);
 }
 
 .panel[open] > summary {
@@ -248,7 +347,7 @@ body {
 }
 
 .check-row:hover {
-  background: var(--color-raised);
+  background: var(--color-surface);
 }
 
 .check-row input {
@@ -263,6 +362,50 @@ body {
   background: none;
   border: none;
   overflow: visible;
+}
+
+/* Leaflet paints its own chrome white; keep it on the sheet's palette. */
+.leaflet-container {
+  background: var(--color-raised);
+  font-family: var(--font-sans);
+}
+
+.leaflet-bar a,
+.leaflet-control-attribution {
+  background: var(--color-raised);
+  color: var(--color-ink);
+}
+
+/*
+ * The one orchestrated moment: on load the profile silhouette wipes in from the
+ * top, in sequence with the verdict. Nothing else on the page animates.
+ */
+@keyframes profile-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.profile svg {
+  animation: profile-in 620ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes verdict-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.verdict {
+  animation: verdict-in 420ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

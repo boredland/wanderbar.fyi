@@ -70,12 +70,41 @@ on every wake; that is lock-screen spam.
 | `app/lib/schedule.ts` | Whole-hour, DST-correct wake scheduling |
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
+| `app/style.css` | Design tokens, `.profile` gutter, shared control surfaces |
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |
 | `app/lib/sync.ts` | Fetch → evaluate → diff → persist |
 | `app/waker.ts` | The Durable Object: one subscription, one schedule |
 | `app/sw/index.ts` | Service worker source; `public/sw.js` is **generated** |
 
 `public/sw.js` is built by `npm run build:sw` and gitignored. Never edit it.
+
+## Design
+
+The page is built as a **topographic sheet**: warm grey-green paper
+(`--color-surface`), lighter cutouts for panels, contour hairlines, and margin
+lettering (`.eyebrow`) set in condensed Archivo.
+
+- **Route orange (`--color-route`) is a fill, never text.** On paper it measures
+  2.37:1 and fails AA. It is the app mark and the map's "still to walk" polyline;
+  wherever it carries meaning, ink sits on top of it (5.63:1). The text accent is
+  `--color-brand`, a deep alpine lake (6.5:1), and warnings are `--color-warn`
+  oxide red (6.4:1). Every text/ground pair in the theme clears WCAG AA.
+- **The timeline's left gutter is the track's own elevation profile.** The
+  profile is turned on its side so progress runs *down* the gutter, matching the
+  reading direction: each row's lower edge is the next row's upper edge, which is
+  what lets rows grow to fit warnings while the ridge stays continuous. See
+  `ProfileSegment` in `app/islands/track-view.tsx`. Warned segments add a hatch
+  overlay and a red edge, so a warning never rests on colour alone.
+- **Two typefaces, self-hosted.** Archivo (variable, with a real width axis) for
+  display, figures and margin lettering; Atkinson Hyperlegible Next for body,
+  because it is drawn to disambiguate letterforms and misreading `15°` as `16°`
+  here is a navigation error, not a typo. Both are latin-subset woff2 in
+  `public/fonts/`: an installable PWA used on a mountain must not depend on a
+  font CDN. Regenerate the icon PNGs from the SVGs if the mark ever changes;
+  the maskable variant is deliberately full-bleed and opaque.
+- **One animation.** The profile wipes in with the verdict on load, and nothing
+  else on the page moves. `prefers-reduced-motion` disables it with
+  `!important`, because component classes set their own transitions.
 
 ## Development
 
@@ -109,6 +138,10 @@ locally and `npx wrangler secret put VAPID_PRIVATE_KEY` in production.
   hook (it defines `merged`) ahead of ours.
 
 ## Attribution
+
+Type: [Archivo](https://fonts.google.com/specimen/Archivo) and
+[Atkinson Hyperlegible Next](https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next),
+both SIL Open Font License 1.1.
 
 Weather data by [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0,
 non-commercial tier). Cross-check from the Norwegian Meteorological Institute /

@@ -11,7 +11,7 @@ export default jsxRenderer(({ children }) => {
         <link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <meta name="theme-color" content="#f97316" />
+        <meta name="theme-color" content="#eaede6" />
         <meta
           name="description"
           content="Weather warnings for the rest of your hike: one GPX track, a pace-based ETA, and a nudge only when conditions change."

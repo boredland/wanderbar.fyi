@@ -10,9 +10,12 @@ import type { Hour } from '../lib/weather'
 const ATTRIBUTION =
   'Kartendaten: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>, SRTM | Kartendarstellung: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
 
-const BEHIND = '#9ca3af'
+// Route orange is a fill, never text: it is the app's mark and the line you
+// have left to walk. Behind you goes to the sheet's own contour grey.
+const BEHIND = '#c9cfc2'
 const AHEAD = '#f97316'
-const WARN = '#b91c1c'
+const WARN = '#a32118'
+const PAPER = '#f6f7f3'
 
 type Props = {
   simplified: [number, number][]
@@ -89,7 +92,7 @@ export default function TrackMap(props: Props) {
         const badge = ws.length
           ? `<span style="position:absolute;right:-7px;top:-7px;display:flex;` +
             `align-items:center;justify-content:center;width:18px;height:18px;` +
-            `border-radius:999px;background:${WARN};color:#fff;box-shadow:0 0 0 2px #fff">` +
+            `border-radius:999px;background:${WARN};color:${PAPER};box-shadow:0 0 0 2px ${PAPER}">` +
             `${conditionIconHtml(ws[0].condition, 11)}</span>`
           : ''
         const icon = L.divIcon({
@@ -144,10 +147,12 @@ export default function TrackMap(props: Props) {
 
   if (props.simplified.length < 2) {
     return (
-      <div class="h-80 w-full rounded-[12px] bg-raised p-4 text-muted">
-        track too short to map
+      <div class="h-80 w-full rounded-[10px] border border-line bg-raised p-4 text-muted">
+        Track too short to map.
       </div>
     )
   }
-  return <div ref={el} tabIndex={-1} class="h-80 w-full rounded-[12px] shadow-map" />
+  return (
+    <div ref={el} tabIndex={-1} class="h-80 w-full rounded-[10px] border border-line" />
+  )
 }

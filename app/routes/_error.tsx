@@ -9,7 +9,7 @@ const handler: ErrorHandler = (e, c) => {
   return c.render(
     <main class="mx-auto flex max-w-2xl flex-col items-start gap-4 p-4">
       <title>Something broke · wanderbar</title>
-      <h1 class="text-xl font-bold tracking-tight">Something broke</h1>
+      <h1 class="display text-xl font-bold">Something broke</h1>
       <p class="text-sm text-muted">
         That is on us, not on you. Your track and settings are stored on your device and
         are unaffected, so reloading is safe.

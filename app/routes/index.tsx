@@ -11,16 +11,17 @@ export default createRoute((c) => {
   return c.render(
     <main class="mx-auto flex max-w-2xl flex-col gap-6 p-4">
       <title>wanderbar</title>
-      <header class="flex items-center gap-3">
-        <img src="/icon.svg" width="32" height="32" alt="" class="rounded-[8px]" />
-        <h1 class="text-lg font-bold tracking-tight">wanderbar</h1>
+      <header class="graticule flex items-baseline gap-3 pb-3">
+        <img src="/icon.svg" width="28" height="28" alt="" class="translate-y-1 rounded-[6px]" />
+        <h1 class="display text-lg font-bold">wanderbar</h1>
+        <p class="eyebrow ml-auto">Weather along your route</p>
       </header>
 
       <TrackView />
 
       <details class="panel">
-        <summary class="text-base">
-          <h2 class="text-base font-medium">New track</h2>
+        <summary>
+          <h2 class="eyebrow">New track</h2>
         </summary>
         <div class="p-4">
           <Upload shareError={shareError} />
@@ -28,8 +29,8 @@ export default createRoute((c) => {
       </details>
 
       <details class="panel">
-        <summary class="text-base">
-          <h2 class="text-base font-medium">This track</h2>
+        <summary>
+          <h2 class="eyebrow">This track</h2>
         </summary>
         <div class="flex flex-col gap-4 p-4">
           <PositionButton />
@@ -38,8 +39,8 @@ export default createRoute((c) => {
       </details>
 
       <details class="panel">
-        <summary class="text-base">
-          <h2 class="text-base font-medium">Warning settings</h2>
+        <summary>
+          <h2 class="eyebrow">Warning settings</h2>
         </summary>
         <div class="p-4">
           <Settings />
@@ -47,8 +48,8 @@ export default createRoute((c) => {
       </details>
 
       <details class="panel">
-        <summary class="text-base">
-          <h2 class="text-base font-medium">Background checks</h2>
+        <summary>
+          <h2 class="eyebrow">Background checks</h2>
         </summary>
         <div class="p-4">
           <ScheduleSettings vapidPublicKey={c.env.VAPID_PUBLIC_KEY} />
@@ -56,7 +57,7 @@ export default createRoute((c) => {
       </details>
 
       <footer class="flex flex-col gap-3 border-t border-line pt-4 text-xs text-muted">
-        <p class="rounded-[6px] border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
+        <p class="border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
           <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The
           data comes from public models and can be wrong, late or missing, and mountain
           weather turns faster than any forecast follows. Always check local sources too
@@ -66,7 +67,9 @@ export default createRoute((c) => {
         </p>
 
         <details>
-          <summary class="min-h-[44px] cursor-pointer py-2">Where the data comes from</summary>
+          <summary class="eyebrow min-h-[44px] cursor-pointer py-2">
+            Where the data comes from
+          </summary>
           <dl class="flex flex-col gap-3 pt-2 text-muted">
             <div>
               <dt class="font-medium text-ink">Forecast</dt>

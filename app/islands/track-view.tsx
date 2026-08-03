@@ -118,7 +118,7 @@ export default function TrackView() {
   if (!track) {
     return (
       <section class="flex flex-col gap-3">
-        <h2 class="text-lg font-bold tracking-tight">Add a GPX track</h2>
+        <h2 class="display text-xl font-bold">Add a GPX track</h2>
         <p class="text-sm text-muted">
           wanderbar works out roughly where you will be along your route and shows the
           weather for the rest of it, warning you only when conditions change.
@@ -152,7 +152,7 @@ export default function TrackView() {
 
   return (
     <div class="flex flex-col gap-6">
-      <h2 class="text-lg font-bold tracking-tight">{track.name}</h2>
+      <h2 class="display text-xl font-bold">{track.name}</h2>
 
       <Verdict
         done={done}
@@ -181,7 +181,7 @@ export default function TrackView() {
         onRefetch={refetch}
       />
 
-      <dl class="flex flex-wrap gap-x-6 gap-y-2 rounded-[12px] bg-raised px-4 py-3">
+      <dl class="graticule flex flex-wrap gap-x-6 gap-y-2 pb-3">
         {[
           ['Time', hoursToText(totalS)],
           ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`],
@@ -189,8 +189,8 @@ export default function TrackView() {
           ['Down', `${Math.round(track.descentM)} m`]
         ].map(([label, value]) => (
           <div key={label}>
-            <dt class="text-xs font-medium uppercase tracking-wider text-muted">{label}</dt>
-            <dd class="figures text-lg font-bold tracking-tight">{value}</dd>
+            <dt class="eyebrow">{label}</dt>
+            <dd class="figures text-lg font-bold">{value}</dd>
           </div>
         ))}
       </dl>
@@ -223,7 +223,7 @@ export default function TrackView() {
 
       <CapabilityLine subscribed={subscribed} schedule={schedule} />
 
-      <p class="rounded-[6px] border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
+      <p class="border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
         Best-effort forecast from public models, so it can be wrong or out of date. Check
         local information too where you can.
       </p>
@@ -253,17 +253,17 @@ function Verdict(props: {
 }) {
   if (props.done) {
     return (
-      <div class="flex items-start gap-3">
+      <div class="verdict flex items-start gap-3">
         <span class="disc text-lg" aria-hidden="true">
           ✓
         </span>
-        <p class="pt-2 text-xl font-bold leading-tight">This hike is done.</p>
+        <p class="display pt-2 text-xl font-bold leading-tight">This hike is done.</p>
       </div>
     )
   }
   if (!props.forecast) {
     return (
-      <p class="text-xl font-bold leading-tight text-muted">
+      <p class="display text-xl font-bold leading-tight text-muted">
         Checking the weather ahead…
       </p>
     )
@@ -279,11 +279,11 @@ function Verdict(props: {
   }
   if (!first) {
     return (
-      <div class="flex items-start gap-3">
+      <div class="verdict flex items-start gap-3">
         <span class="disc disc-clear text-lg" aria-hidden="true">
           ✓
         </span>
-        <p class="pt-2 text-xl font-bold leading-tight text-clear">
+        <p class="display pt-2 text-xl font-bold leading-tight text-clear">
           No un-wanderbar weather ahead.
         </p>
       </div>
@@ -294,11 +294,11 @@ function Verdict(props: {
   // "Clear until X" is a lie when the very first waypoint is already warned.
   const immediate = first.wp.seq === props.remaining[0]?.seq
   return (
-    <div class="flex items-start gap-3">
+    <div class="verdict flex items-start gap-3">
       <span class="disc disc-warn" aria-hidden="true">
         <ConditionIcon condition={first.w.condition} size={22} />
       </span>
-      <p class="text-xl font-bold leading-tight" role="status" aria-live="polite">
+      <p class="display text-xl font-bold leading-tight" role="status" aria-live="polite">
         {immediate ? (
           <>
             {label} from the start, at{' '}
@@ -440,7 +440,7 @@ function FreshnessRow(props: {
 }) {
   const stale = props.forecast !== null && props.now - props.forecast.fetchedAt > STALE_MS
   return (
-    <div class="flex items-center justify-between gap-4 border-t border-line pt-3">
+    <div class="graticule flex items-center justify-between gap-4 pb-3">
       <p
         role="status"
         aria-live="polite"
@@ -478,14 +478,20 @@ function Timeline(props: {
   const bySeq: Record<number, Hour[]> = {}
   for (const wf of props.forecast?.waypoints ?? []) bySeq[wf.seq] = wf.hours
 
-  // The ridge is the track's own elevation, normalised across what remains.
+  // The elevation profile of what remains, normalised once for every row.
   const eles = props.remaining.map((w) => w.eleM).filter((e): e is number => e !== null)
   const loEle = eles.length ? Math.min(...eles) : 0
   const hiEle = eles.length ? Math.max(...eles) : 0
   const span = hiEle - loEle
+  /** Silhouette height at row i, as a 0..1 fraction of the gutter. */
+  const height = (i: number) => {
+    const ele = props.remaining[i]?.eleM
+    if (span <= 0 || ele === undefined || ele === null) return 0.5
+    return 0.12 + ((ele - loEle) / span) * 0.76
+  }
 
   return (
-    <ol class="overflow-hidden rounded-[12px] border border-line">
+    <ol class="overflow-hidden rounded-[10px] border border-line bg-raised">
       {props.remaining.map((wp, i) => {
         const at = props.anchorMs + wp.etaOffsetS * 1000
         const hour = nearestHour(bySeq[wp.seq] ?? [], at)
@@ -502,61 +508,120 @@ function Timeline(props: {
                 hour.precipMm > 0.2 !== met.precipMm > 0.2)
             : false
 
-        const ridge =
-          span > 0 && wp.eleM !== null ? Math.round(((wp.eleM - loEle) / span) * 62) + 8 : 0
         const isNext = i === 0
+        // Segment endpoints, so consecutive rows tile into one silhouette.
+        const hIn = i === 0 ? height(0) : (height(i - 1) + height(i)) / 2
+        const hOut =
+          i === props.remaining.length - 1 ? height(i) : (height(i) + height(i + 1)) / 2
 
         return (
           <li
             key={wp.seq}
-            class={`ridge relative flex flex-col gap-1 py-3 pl-4 pr-3 ${
-              i > 0 ? 'border-t border-line' : ''
-            } ${ws.length ? 'row-warn' : isNext ? 'row-now' : ''}`}
-            style={`--ridge:${ridge}%`}
+            class={`relative flex items-stretch ${i > 0 ? 'border-t border-line' : ''} ${
+              ws.length ? 'row-warn' : isNext ? 'row-now' : ''
+            }`}
           >
-            <div class="flex items-center gap-3">
-              <span class="figures min-w-[7ch] shrink-0 text-base font-medium">
-                {dayTime(at, props.now)}
-              </span>
-              <img
-                src={wmoIcon(hour?.code ?? null, isDayHour(at))}
-                width="28"
-                height="28"
-                alt=""
-                class="shrink-0"
-              />
-              <span class="figures min-w-[4ch] shrink-0 text-base font-medium">
-                {hour?.tempC === null || hour === null ? '—' : `${hour.tempC.toFixed(0)}°`}
-              </span>
-              <span class="figures text-sm text-muted">
-                km {(wp.cumDistM / 1000).toFixed(1)}
-                {wp.eleM !== null ? ` · ${Math.round(wp.eleM)} m` : ''}
-              </span>
-            </div>
-            {ws.length ? (
-              <div class="flex flex-wrap gap-x-3 gap-y-1">
-                {ws.map((w) => (
-                  <span
-                    key={w.condition}
-                    class="inline-flex items-center gap-1.5 text-sm font-medium text-warn"
-                  >
-                    <ConditionIcon condition={w.condition} size={16} />
-                    {conditionLabel[w.condition]} ({w.detail})
-                  </span>
-                ))}
+            <ProfileSegment inFrac={hIn} outFrac={hOut} warned={ws.length > 0} index={i} />
+            <div class="flex min-w-0 flex-1 flex-col gap-1 py-3 pl-3 pr-3">
+              {/* Wraps rather than clips: km/elevation drops to its own line
+                  on a narrow phone instead of running off the row. */}
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                <span class="figures min-w-[7ch] shrink-0 text-base font-semibold">
+                  {dayTime(at, props.now)}
+                </span>
+                <img
+                  src={wmoIcon(hour?.code ?? null, isDayHour(at))}
+                  width="28"
+                  height="28"
+                  alt=""
+                  class="shrink-0"
+                />
+                <span class="figures min-w-[4ch] shrink-0 text-base font-semibold">
+                  {hour?.tempC === null || hour === null ? '—' : `${hour.tempC.toFixed(0)}°`}
+                </span>
+                <span class="figures shrink-0 text-sm text-muted sm:ml-auto">
+                  km {(wp.cumDistM / 1000).toFixed(1)}
+                  {wp.eleM !== null ? ` · ${Math.round(wp.eleM)} m` : ''}
+                </span>
               </div>
-            ) : null}
-            {met ? (
-              <p class="text-xs text-muted">
-                MET: {met.tempC === null ? '—' : `${met.tempC.toFixed(0)} °C`}
-                {met.precipMm !== null ? `, ${met.precipMm.toFixed(1)} mm` : ''}
-                {disagree ? ' · sources disagree' : ''}
-              </p>
-            ) : null}
+              {ws.length ? (
+                <div class="flex flex-wrap gap-x-3 gap-y-1">
+                  {ws.map((w) => (
+                    <span
+                      key={w.condition}
+                      class="inline-flex items-center gap-1.5 text-sm font-semibold text-warn"
+                    >
+                      <ConditionIcon condition={w.condition} size={16} />
+                      {conditionLabel[w.condition]} ({w.detail})
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {met ? (
+                <p class="text-xs text-muted">
+                  MET: {met.tempC === null ? '—' : `${met.tempC.toFixed(0)} °C`}
+                  {met.precipMm !== null ? `, ${met.precipMm.toFixed(1)} mm` : ''}
+                  {disagree ? ' · sources disagree' : ''}
+                </p>
+              ) : null}
+            </div>
           </li>
         )
       })}
     </ol>
+  )
+}
+
+/**
+ * One row's slice of the track's elevation profile.
+ *
+ * The profile is turned on its side: progress runs *down* the gutter, matching
+ * the direction the timeline itself is read, and elevation becomes horizontal
+ * extent. That is what makes the slices tile — each row's lower edge is the next
+ * row's upper edge — so however tall a row grows when warnings are added, the
+ * gutter stays one continuous ridge rather than a stack of separate diagrams.
+ *
+ * Warned slices are hatched, the way a paper map marks a hazard area, so the
+ * warning does not rest on colour alone.
+ */
+function ProfileSegment(props: {
+  inFrac: number
+  outFrac: number
+  warned: boolean
+  index: number
+}) {
+  const id = `hatch-${props.index}`
+  const xIn = (props.inFrac * 46).toFixed(2)
+  const xOut = (props.outFrac * 46).toFixed(2)
+  return (
+    <div class="profile" aria-hidden="true">
+      <svg viewBox="0 0 46 100" preserveAspectRatio="none">
+        {props.warned ? (
+          <defs>
+            <pattern
+              id={id}
+              width="8"
+              height="8"
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(45)"
+            >
+              <line x1="0" y1="0" x2="0" y2="8" stroke="var(--color-warn)" stroke-width="1" />
+            </pattern>
+          </defs>
+        ) : null}
+        <path d={`M0 0H${xIn}L${xOut} 100H0Z`} fill="var(--color-line)" />
+        {props.warned ? (
+          <path d={`M0 0H${xIn}L${xOut} 100H0Z`} fill={`url(#${id})`} opacity="0.5" />
+        ) : null}
+        <path
+          d={`M${xIn} 0L${xOut} 100`}
+          fill="none"
+          stroke={props.warned ? 'var(--color-warn)' : 'var(--color-muted)'}
+          stroke-width="1.5"
+          vector-effect="non-scaling-stroke"
+        />
+      </svg>
+    </div>
   )
 }
 
