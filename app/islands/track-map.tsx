@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'hono/jsx'
-import { conditionGlyph, conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
+import { conditionIconHtml } from '../lib/condition-icon'
+import { conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
 import type { Forecast } from '../lib/store'
 import type { Waypoint } from '../lib/track'
 import type { Warning } from '../lib/warnings'
@@ -84,9 +85,10 @@ export default function TrackMap(props: Props) {
         const ws = props.warningsBySeq[wp.seq] ?? []
         const ring = ws.length ? `box-shadow:0 0 0 3px ${WARN};border-radius:50%;` : ''
         const badge = ws.length
-          ? `<span style="position:absolute;right:-6px;top:-6px;font-size:12px">${
-              conditionGlyph[ws[0].condition]
-            }</span>`
+          ? `<span style="position:absolute;right:-7px;top:-7px;display:flex;` +
+            `align-items:center;justify-content:center;width:18px;height:18px;` +
+            `border-radius:999px;background:${WARN};color:#fff;box-shadow:0 0 0 2px #fff">` +
+            `${conditionIconHtml(ws[0].condition, 11)}</span>`
           : ''
         const icon = L.divIcon({
           className: 'wx-marker',

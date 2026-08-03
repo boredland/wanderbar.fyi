@@ -93,6 +93,143 @@ body {
   color: var(--color-surface);
 }
 
+/*
+ * Shared control surfaces. Defined once so hover, press, focus and disabled
+ * states stay identical across every button and select, per Material's state
+ * layer guidance, rather than being re-invented per island.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    transform 150ms ease-out;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-raised);
+  border-color: var(--color-muted);
+}
+
+/* Subtle press scale, restored on release, per HIG/MD press feedback. */
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #ea6a0c;
+  border-color: #ea6a0c;
+}
+
+.btn-danger {
+  border-color: var(--color-warn);
+  color: var(--color-warn);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.field {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  transition: border-color 150ms ease-out;
+}
+
+.field:hover:not(:disabled) {
+  border-color: var(--color-muted);
+}
+
+.field:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Disclosure panels: one surface treatment, one hover, one cursor. */
+.panel {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.panel > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 150ms ease-out;
+}
+
+.panel > summary:hover {
+  background: var(--color-raised);
+}
+
+.panel[open] > summary {
+  border-bottom: 1px solid var(--color-line);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+/*
+ * Checkbox rows: the box stays 20px for visual weight, but the whole label is
+ * the target, so the tap area clears 44px per HIG/Material without a chunky
+ * control. Extends the hit area rather than the visual bounds.
+ */
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.check-row:hover {
+  background: var(--color-raised);
+}
+
+.check-row input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: var(--color-brand);
+  cursor: pointer;
+}
+
 .wx-marker {
   background: none;
   border: none;
@@ -100,10 +237,15 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /*
+   * !important because component classes like .btn set their own transition and
+   * would otherwise win on specificity, silently ignoring the user's setting.
+   */
   *,
   *::before,
   *::after {
-    animation: none;
-    transition: none;
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }

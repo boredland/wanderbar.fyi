@@ -86,18 +86,6 @@ export function isDayHour(ms: number): boolean {
   return h >= 6 && h < 20
 }
 
-export const conditionGlyph: Record<Condition, string> = {
-  rain: '🌧',
-  hail: '🧊',
-  wind: '💨',
-  snow: '❄',
-  heat: '🌡',
-  blizzard: '🌬',
-  thunderstorm: '⛈',
-  darkness: '🌙',
-  fire: '🔥'
-}
-
 export const conditionLabel: Record<Condition, string> = {
   rain: 'Rain',
   hail: 'Hail',

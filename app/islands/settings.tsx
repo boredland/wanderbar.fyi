@@ -44,7 +44,7 @@ export default function Settings() {
       <span class="text-[14px]">{label}</span>
       <input
         type="number"
-        class="figures min-h-[44px] w-28 rounded-[6px] border border-line px-3"
+        class="field figures w-28"
         min={min}
         max={max}
         step={step}
@@ -58,10 +58,9 @@ export default function Settings() {
   return (
     <div class="flex flex-col gap-3">
       {CONDITIONS.map((c) => (
-        <label key={c} class="flex min-h-[44px] items-center gap-3">
+        <label key={c} class="check-row">
           <input
             type="checkbox"
-            class="h-5 w-5"
             checked={t.enabled[c]}
             onChange={(e) =>
               persist({
@@ -76,7 +75,7 @@ export default function Settings() {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">Fire danger from</span>
         <select
-          class="min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field"
           disabled={!t.enabled.fire}
           value={t.fireDanger}
           onChange={(e) =>

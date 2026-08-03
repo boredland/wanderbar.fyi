@@ -100,11 +100,11 @@ export default function Manage() {
             type="text"
             value={name}
             onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            class="min-h-[44px] flex-1 rounded-[6px] border border-line px-3 transition-[border-color] duration-150"
+            class="field flex-1"
           />
           <button
             type="button"
-            class="min-h-[44px] rounded-[6px] border border-line px-4"
+            class="btn"
             onClick={saveName}
           >
             Save
@@ -115,7 +115,7 @@ export default function Manage() {
       <label class="flex flex-col gap-2">
         <span class="text-[14px] text-muted">Pace profile</span>
         <select
-          class="min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field"
           disabled={busy}
           value={track.profile}
           onChange={(e) =>
@@ -133,7 +133,7 @@ export default function Manage() {
       <label class="flex flex-col gap-2">
         <span class="text-[14px] text-muted">Breaks</span>
         <select
-          class="min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field"
           disabled={busy}
           value={track.rest}
           onChange={(e) =>
@@ -153,7 +153,7 @@ export default function Manage() {
 
       <button
         type="button"
-        class="min-h-[44px] rounded-[6px] border border-warn px-4 text-warn"
+        class="btn btn-danger"
         onClick={remove}
       >
         Delete this track

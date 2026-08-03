@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
-import { conditionGlyph, conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
+import { ConditionIcon } from '../lib/condition-icon'
+import { conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
 import { notifyDelta } from '../lib/notify'
 import { get, set, type Fix, type Forecast, type Track } from '../lib/store'
 import { syncNow } from '../lib/sync'
@@ -158,8 +159,8 @@ export default function TrackView() {
           ['Ascent', `${Math.round(track.ascentM)} m`]
         ].map(([label, value]) => (
           <div key={label}>
-            <dt class="text-[12px] uppercase tracking-wide text-muted">{label}</dt>
-            <dd class="figures text-[20px] font-medium">{value}</dd>
+            <dt class="text-[12px] font-medium uppercase tracking-wider text-muted">{label}</dt>
+            <dd class="figures text-[20px] font-bold tracking-tight">{value}</dd>
           </div>
         ))}
       </dl>
@@ -259,8 +260,8 @@ function Verdict(props: {
   const immediate = first.wp.seq === props.remaining[0]?.seq
   return (
     <div class="flex items-start gap-3">
-      <span class="disc disc-warn text-[20px]" aria-hidden="true">
-        {conditionGlyph[first.w.condition]}
+      <span class="disc disc-warn" aria-hidden="true">
+        <ConditionIcon condition={first.w.condition} size={22} />
       </span>
       <p class="text-[28px] font-bold leading-tight">
         {immediate ? (
@@ -376,7 +377,7 @@ function StartRow(props: { track: Track; now: number; onChanged: () => void }) {
     <label class="flex flex-wrap items-center gap-3">
       <span class="text-[14px] text-muted">Starting</span>
       <select
-        class="figures min-h-[44px] rounded-[6px] border border-line bg-surface px-3 font-medium"
+        class="field figures font-medium"
         value={current}
         onChange={(e) => choose((e.target as HTMLSelectElement).value)}
       >
@@ -417,7 +418,7 @@ function FreshnessRow(props: {
       </p>
       <button
         type="button"
-        class="min-h-[44px] shrink-0 rounded-[6px] border border-line px-4 py-2 font-medium disabled:opacity-60"
+        class="btn shrink-0"
         disabled={props.fetching}
         onClick={props.onRefetch}
       >
@@ -496,8 +497,12 @@ function Timeline(props: {
             {ws.length ? (
               <div class="flex flex-wrap gap-x-3 gap-y-1 pl-[74px]">
                 {ws.map((w) => (
-                  <span key={w.condition} class="text-[14px] font-medium text-warn">
-                    {conditionGlyph[w.condition]} {conditionLabel[w.condition]} ({w.detail})
+                  <span
+                    key={w.condition}
+                    class="inline-flex items-center gap-1.5 text-[14px] font-medium text-warn"
+                  >
+                    <ConditionIcon condition={w.condition} size={16} />
+                    {conditionLabel[w.condition]} ({w.detail})
                   </span>
                 ))}
               </div>

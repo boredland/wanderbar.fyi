@@ -68,7 +68,7 @@ export default function Upload(props: { shareError?: string }) {
           type="file"
           name="gpx"
           accept=".gpx,application/gpx+xml,application/xml,text/xml"
-          class="min-h-[44px]"
+          class="field py-2"
           required
         />
       </label>
@@ -77,14 +77,14 @@ export default function Upload(props: { shareError?: string }) {
         <input
           type="text"
           name="name"
-          class="min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field"
         />
       </label>
       <label class="flex flex-col gap-2">
         <span class="text-[14px] text-muted">Start</span>
         <select
           name="startAt"
-          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field figures"
         >
           {startOptions(Date.now()).map((o) => (
             <option key={o.value} value={o.value}>
@@ -97,7 +97,7 @@ export default function Upload(props: { shareError?: string }) {
         <span class="text-[14px] text-muted">Pace profile</span>
         <select
           name="profile"
-          class="min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field"
         >
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
             <option key={id} value={id}>
@@ -108,7 +108,7 @@ export default function Upload(props: { shareError?: string }) {
       </label>
       <button
         type="submit"
-        class="min-h-[44px] rounded-[6px] bg-brand px-4 font-medium text-ink disabled:opacity-60"
+        class="btn btn-primary"
         disabled={busy}
       >
         {busy ? 'Adding…' : 'Add track'}

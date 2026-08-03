@@ -111,10 +111,9 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
 
   return (
     <div class="flex flex-col gap-3">
-      <label class="flex min-h-[44px] items-center gap-3">
+      <label class="check-row">
         <input
           type="checkbox"
-          class="h-5 w-5"
           checked={s.enabled}
           onChange={(e) => push({ ...s, enabled: (e.target as HTMLInputElement).checked })}
         />
@@ -124,7 +123,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">Every</span>
         <select
-          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field figures"
           value={String(s.intervalH)}
           onChange={(e) => push({ ...s, intervalH: Number((e.target as HTMLSelectElement).value) })}
         >
@@ -139,7 +138,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">From</span>
         <select
-          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field figures"
           value={String(s.startH)}
           onChange={(e) => push({ ...s, startH: Number((e.target as HTMLSelectElement).value) })}
         >
@@ -154,7 +153,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       <label class="flex items-center justify-between gap-4">
         <span class="text-[14px]">To</span>
         <select
-          class="figures min-h-[44px] rounded-[6px] border border-line px-3"
+          class="field figures"
           value={String(s.endH)}
           onChange={(e) => push({ ...s, endH: Number((e.target as HTMLSelectElement).value) })}
         >
@@ -174,7 +173,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
 
       <button
         type="button"
-        class="min-h-[44px] rounded-[6px] border border-line px-4 disabled:opacity-60"
+        class="btn"
         disabled={busy}
         onClick={enable}
       >

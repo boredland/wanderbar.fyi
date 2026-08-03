@@ -54,7 +54,7 @@ export default function PositionButton() {
     <div class="flex flex-col gap-2">
       <button
         type="button"
-        class="min-h-[44px] rounded-[6px] border border-line px-4 disabled:opacity-60"
+        class="btn"
         disabled={busy}
         onClick={locate}
       >

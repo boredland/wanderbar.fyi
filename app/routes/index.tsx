@@ -11,39 +11,46 @@ export default createRoute((c) => {
   return c.render(
     <main class="mx-auto flex max-w-2xl flex-col gap-6 p-4">
       <title>wanderbar</title>
-      <h1 class="text-[20px] font-bold">wanderbar</h1>
+      <header class="flex items-center gap-3">
+        <img src="/icon.svg" width="32" height="32" alt="" class="rounded-[8px]" />
+        <h1 class="text-[20px] font-bold tracking-tight">wanderbar</h1>
+      </header>
 
       <TrackView />
 
-      <details class="rounded-[12px] border border-line p-4">
-        <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">Add a track</summary>
-        <div class="pt-4">
+      <details class="panel">
+        <summary class="text-[16px]">
+          <h2 class="text-[16px] font-medium">Add a track</h2>
+        </summary>
+        <div class="p-4">
           <Upload shareError={shareError} />
         </div>
       </details>
 
-      <details class="rounded-[12px] border border-line p-4">
-        <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">This track</summary>
-        <div class="flex flex-col gap-4 pt-4">
+      <details class="panel">
+        <summary class="text-[16px]">
+          <h2 class="text-[16px] font-medium">This track</h2>
+        </summary>
+        <div class="flex flex-col gap-4 p-4">
           <PositionButton />
           <Manage />
         </div>
       </details>
 
-      <details class="rounded-[12px] border border-line p-4">
-        <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">
-          Warning settings
+      <details class="panel">
+        <summary class="text-[16px]">
+          <h2 class="text-[16px] font-medium">Warning settings</h2>
         </summary>
-        <div class="pt-4">
+        <div class="p-4">
           <Settings />
         </div>
       </details>
 
-      <details class="rounded-[12px] border border-line p-4">
-        <summary class="min-h-[44px] cursor-pointer text-[16px] font-medium">
-          Background checks
+      <details class="panel">
+        <summary class="text-[16px]">
+          <h2 class="text-[16px] font-medium">Background checks</h2>
         </summary>
-        <div class="pt-4">
+        <div class="p-4">
           <ScheduleSettings vapidPublicKey={c.env.VAPID_PUBLIC_KEY} />
         </div>
       </details>
