@@ -97,6 +97,26 @@ describe('evaluateWarnings', () => {
   })
 })
 
+describe('one warning per waypoint and condition', () => {
+  it('collapses several in-window hours to the one nearest the ETA', () => {
+    const hours = [
+      hour({ t: NOW - 3600_000, tempC: 31, apparentC: 31 }),
+      hour({ t: NOW, tempC: 34, apparentC: 34 }),
+      hour({ t: NOW + 3600_000, tempC: 32, apparentC: 32 })
+    ]
+    const got = evaluateWarnings(DEFAULT_THRESHOLDS, [{ seq: 0, hours }], [wp(0, 0)], 0, NOW)
+    expect(got).toHaveLength(1)
+    // The ETA hour is 34 °C, not the neighbouring hours.
+    expect(got[0].detail).toBe('34.0 °C')
+    expect(got[0].forecastHour).toBe(NOW)
+  })
+
+  it('still reports distinct conditions separately', () => {
+    const h = hour({ tempC: 33, apparentC: 33, gustKmh: 70 })
+    expect(conditions(evaluate(h))).toEqual(['heat', 'wind'])
+  })
+})
+
 describe('warning windows follow the start anchor', () => {
   it('matches the hour at the planned start, not the hour at now', () => {
     const tomorrow = NOW + 86400_000

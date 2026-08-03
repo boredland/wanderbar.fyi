@@ -67,11 +67,22 @@ export function evaluateWarnings(
     if (!wp || wp.seq < currentSeq) continue
     const etaMs = anchorMs + wp.etaOffsetS * 1000
 
+    // A warning's identity is (seq, condition), so several hours inside the
+    // window must collapse to one entry: keep the hour closest to the ETA,
+    // which is the one the hiker will actually walk through.
+    const bestByCondition: Partial<Record<Condition, { w: Warning; gap: number }>> = {}
+
     for (const h of wf.hours) {
-      if (Math.abs(h.t - etaMs) > ETA_WINDOW_MS) continue
+      const gap = Math.abs(h.t - etaMs)
+      if (gap > ETA_WINDOW_MS) continue
       const push = (condition: Condition, detail: string) => {
         if (!thresholds.enabled[condition]) return
-        out.push({ seq: wf.seq, condition, forecastHour: h.t, detail })
+        const prev = bestByCondition[condition]
+        if (prev && prev.gap <= gap) return
+        bestByCondition[condition] = {
+          w: { seq: wf.seq, condition, forecastHour: h.t, detail },
+          gap
+        }
       }
 
       const code = h.code
@@ -108,6 +119,10 @@ export function evaluateWarnings(
 
       const hot = Math.max(temp ?? -Infinity, feels ?? -Infinity)
       if (Number.isFinite(hot) && hot >= thresholds.heatC) push('heat', `${hot.toFixed(1)} °C`)
+    }
+
+    for (const picked of Object.values(bestByCondition)) {
+      if (picked) out.push(picked.w)
     }
   }
   return out

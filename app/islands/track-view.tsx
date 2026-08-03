@@ -149,10 +149,18 @@ export default function TrackView() {
         onRefetch={refetch}
       />
 
-      <p class="text-[14px] text-[--color-muted]">
-        Total {hoursToText(totalS)} · {(track.lengthM / 1000).toFixed(1)} km ·{' '}
-        {Math.round(track.ascentM)} m up
-      </p>
+      <dl class="flex flex-wrap gap-x-6 gap-y-2 rounded-[12px] bg-[--color-raised] px-4 py-3">
+        {[
+          ['Time', hoursToText(totalS)],
+          ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`],
+          ['Ascent', `${Math.round(track.ascentM)} m`]
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dt class="text-[12px] uppercase tracking-wide text-[--color-muted]">{label}</dt>
+            <dd class="figures text-[20px] font-medium">{value}</dd>
+          </div>
+        ))}
+      </dl>
 
       {done ? (
         <p class="text-[16px]">This hike is done.</p>
@@ -205,9 +213,22 @@ function Verdict(props: {
   anchorMs: number
   now: number
 }) {
-  if (props.done) return <p class="text-[28px] font-bold">This hike is done.</p>
+  if (props.done) {
+    return (
+      <div class="flex items-start gap-3">
+        <span class="disc text-[20px]" aria-hidden="true">
+          ✓
+        </span>
+        <p class="pt-2 text-[28px] font-bold leading-tight">This hike is done.</p>
+      </div>
+    )
+  }
   if (!props.forecast) {
-    return <p class="text-[28px] font-bold text-[--color-muted]">Checking the weather ahead…</p>
+    return (
+      <p class="text-[28px] font-bold leading-tight text-[--color-muted]">
+        Checking the weather ahead…
+      </p>
+    )
   }
 
   let first: { w: Warning; wp: Waypoint } | null = null
@@ -220,18 +241,39 @@ function Verdict(props: {
   }
   if (!first) {
     return (
-      <p class="text-[28px] font-bold text-[--color-clear]">No un-wanderbar weather ahead.</p>
+      <div class="flex items-start gap-3">
+        <span class="disc disc-clear text-[20px]" aria-hidden="true">
+          ✓
+        </span>
+        <p class="pt-2 text-[28px] font-bold leading-tight text-[--color-clear]">
+          No un-wanderbar weather ahead.
+        </p>
+      </div>
     )
   }
   const at = props.anchorMs + first.wp.etaOffsetS * 1000
+  const label = <span class="text-[--color-warn]">{conditionLabel[first.w.condition].toLowerCase()}</span>
+  // "Clear until X" is a lie when the very first waypoint is already warned.
+  const immediate = first.wp.seq === props.remaining[0]?.seq
   return (
-    <p class="text-[28px] font-bold">
-      Clear until <span class="figures">{dayTime(at, props.now)}</span>, then{' '}
-      <span class="text-[--color-warn]">
-        {conditionGlyph[first.w.condition]} {conditionLabel[first.w.condition].toLowerCase()}
-      </span>{' '}
-      at <span class="figures">km {(first.wp.cumDistM / 1000).toFixed(0)}</span>.
-    </p>
+    <div class="flex items-start gap-3">
+      <span class="disc disc-warn text-[20px]" aria-hidden="true">
+        {conditionGlyph[first.w.condition]}
+      </span>
+      <p class="text-[28px] font-bold leading-tight">
+        {immediate ? (
+          <>
+            {label} from the start, at{' '}
+            <span class="figures">{dayTime(at, props.now)}</span>.
+          </>
+        ) : (
+          <>
+            Clear until <span class="figures">{dayTime(at, props.now)}</span>, then {label} at{' '}
+            <span class="figures">km {(first.wp.cumDistM / 1000).toFixed(1)}</span>.
+          </>
+        )}
+      </p>
+    </div>
   )
 }
 
@@ -291,8 +333,8 @@ function FreshnessRow(props: {
 }) {
   const stale = props.forecast !== null && props.now - props.forecast.fetchedAt > STALE_MS
   return (
-    <div class="flex items-center gap-4">
-      <p class={`text-[14px] ${stale ? 'text-[--color-warn]' : 'text-[--color-muted]'}`}>
+    <div class="flex items-center justify-between gap-4 border-t border-[--color-line] pt-3">
+      <p class={`text-[14px] ${stale ? 'font-medium text-[--color-warn]' : 'text-[--color-muted]'}`}>
         {props.forecast ? (
           <>
             Last fetched <span class="figures">{clock(props.forecast.fetchedAt)}</span>
@@ -304,7 +346,7 @@ function FreshnessRow(props: {
       </p>
       <button
         type="button"
-        class="min-h-[44px] min-w-[44px] rounded-[6px] border border-[--color-line] px-4 py-2 disabled:opacity-60"
+        class="min-h-[44px] shrink-0 rounded-[6px] border border-[--color-line] px-4 py-2 font-medium disabled:opacity-60"
         disabled={props.fetching}
         onClick={props.onRefetch}
       >
@@ -325,8 +367,14 @@ function Timeline(props: {
   const bySeq: Record<number, Hour[]> = {}
   for (const wf of props.forecast?.waypoints ?? []) bySeq[wf.seq] = wf.hours
 
+  // The ridge is the track's own elevation, normalised across what remains.
+  const eles = props.remaining.map((w) => w.eleM).filter((e): e is number => e !== null)
+  const loEle = eles.length ? Math.min(...eles) : 0
+  const hiEle = eles.length ? Math.max(...eles) : 0
+  const span = hiEle - loEle
+
   return (
-    <ol>
+    <ol class="overflow-hidden rounded-[12px] border border-[--color-line]">
       {props.remaining.map((wp, i) => {
         const at = props.anchorMs + wp.etaOffsetS * 1000
         const hour = nearestHour(bySeq[wp.seq] ?? [], at)
@@ -343,35 +391,48 @@ function Timeline(props: {
                 hour.precipMm > 0.2 !== met.precipMm > 0.2)
             : false
 
+        const ridge =
+          span > 0 && wp.eleM !== null ? Math.round(((wp.eleM - loEle) / span) * 62) + 8 : 0
+        const isNext = i === 0
+
         return (
           <li
             key={wp.seq}
-            class={`flex flex-col gap-1 px-3 py-3 ${i % 2 === 1 ? 'bg-[--color-raised]' : ''} ${
-              ws.length ? 'border-l-[3px] border-[--color-warn]' : ''
-            }`}
+            class={`ridge relative flex flex-col gap-1 py-3 pl-4 pr-3 ${
+              i > 0 ? 'border-t border-[--color-line]' : ''
+            } ${ws.length ? 'row-warn' : isNext ? 'row-now' : ''}`}
+            style={`--ridge:${ridge}%`}
           >
             <div class="flex items-center gap-3">
-              <span class="figures text-[16px] font-medium">{dayTime(at, props.now)}</span>
-              <span class="figures text-[14px] text-[--color-muted]">
-                km {(wp.cumDistM / 1000).toFixed(1)}
+              <span class="figures w-[74px] shrink-0 text-[16px] font-medium">
+                {dayTime(at, props.now)}
               </span>
               <img
                 src={wmoIcon(hour?.code ?? null, isDayHour(at))}
                 width="28"
                 height="28"
                 alt=""
+                class="shrink-0"
               />
-              <span class="figures text-[16px]">
-                {hour?.tempC === null || hour === null ? '—' : `${hour.tempC.toFixed(0)} °C`}
+              <span class="figures w-[52px] shrink-0 text-[16px] font-medium">
+                {hour?.tempC === null || hour === null ? '—' : `${hour.tempC.toFixed(0)}°`}
               </span>
-              {ws.map((w) => (
-                <span key={w.condition} class="text-[14px] text-[--color-warn]">
-                  {conditionGlyph[w.condition]} {conditionLabel[w.condition]} ({w.detail})
-                </span>
-              ))}
+              <span class="figures text-[14px] text-[--color-muted]">
+                km {(wp.cumDistM / 1000).toFixed(1)}
+                {wp.eleM !== null ? ` · ${Math.round(wp.eleM)} m` : ''}
+              </span>
             </div>
+            {ws.length ? (
+              <div class="flex flex-wrap gap-x-3 gap-y-1 pl-[74px]">
+                {ws.map((w) => (
+                  <span key={w.condition} class="text-[14px] font-medium text-[--color-warn]">
+                    {conditionGlyph[w.condition]} {conditionLabel[w.condition]} ({w.detail})
+                  </span>
+                ))}
+              </div>
+            ) : null}
             {met ? (
-              <p class="text-[12px] text-[--color-muted]">
+              <p class="pl-[74px] text-[12px] text-[--color-muted]">
                 MET: {met.tempC === null ? '—' : `${met.tempC.toFixed(0)} °C`}
                 {met.precipMm !== null ? `, ${met.precipMm.toFixed(1)} mm` : ''}
                 {disagree ? ' · sources disagree' : ''}

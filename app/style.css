@@ -48,6 +48,51 @@ body {
   outline-offset: 2px;
 }
 
+/*
+ * Timeline rows carry a terrain profile: the track's own elevation, drawn as a
+ * ridge behind each row. It is the one thing that differs per row and that a
+ * hiker already has a mental model for, so it gives the list shape without
+ * adding a ninth colour or an idle animation.
+ */
+.ridge {
+  background: linear-gradient(to top, var(--color-line) 0 var(--ridge, 0%), transparent var(--ridge, 0%));
+}
+
+/* Warned rows: a solid bar, not a hairline, so it survives bright sunlight. */
+.row-warn {
+  box-shadow: inset 3px 0 0 0 var(--color-warn);
+}
+
+.row-now {
+  box-shadow: inset 3px 0 0 0 var(--color-brand);
+}
+
+/*
+ * The verdict glyph sits in a filled disc. Brand orange fails AA for text but
+ * is fine as a fill, and ink on orange measures 6.24:1.
+ */
+.disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--color-brand);
+  color: var(--color-ink);
+  flex: none;
+}
+
+.disc-warn {
+  background: var(--color-warn);
+  color: var(--color-surface);
+}
+
+.disc-clear {
+  background: var(--color-clear);
+  color: var(--color-surface);
+}
+
 .wx-marker {
   background: none;
   border: none;
