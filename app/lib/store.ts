@@ -15,6 +15,7 @@ export type Track = {
   bbox: [number, number, number, number]
   lengthM: number
   ascentM: number
+  descentM: number
   eleSource: 'gpx' | 'dem' | 'none'
   /**
    * Planned start, epoch ms; may be in the future. Null means "assume now".
@@ -110,7 +111,10 @@ export async function get<K extends keyof Stored>(k: K): Promise<Stored[K]> {
     return {
       ...t,
       rest: t.rest ?? DEFAULT_REST,
-      startAt: t.startAt ?? null
+      startAt: t.startAt ?? null,
+      // Tracks stored before descent was measured: 0 reads as "not known"
+      // rather than fabricating a figure from resampled waypoints.
+      descentM: t.descentM ?? 0
     } as Stored[K]
   }
   if (k === 'thresholds') {

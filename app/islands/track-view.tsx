@@ -156,7 +156,8 @@ export default function TrackView() {
         {[
           ['Time', hoursToText(totalS)],
           ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`],
-          ['Ascent', `${Math.round(track.ascentM)} m`]
+          ['Up', `${Math.round(track.ascentM)} m`],
+          ['Down', `${Math.round(track.descentM)} m`]
         ].map(([label, value]) => (
           <div key={label}>
             <dt class="text-[12px] font-medium uppercase tracking-wider text-muted">{label}</dt>

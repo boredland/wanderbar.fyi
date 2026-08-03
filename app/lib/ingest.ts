@@ -8,6 +8,7 @@ import {
   haversineM,
   resample,
   simplifyForMap,
+  trackTotals,
   DEFAULT_REST,
   type ProfileId,
   type RestId
@@ -69,8 +70,27 @@ export async function ingestGpx(input: {
   }
 
   const rest: RestId = input.rest ?? DEFAULT_REST
-  const waypoints = applyPace(wps, input.profile, rest)
-  const last = waypoints[waypoints.length - 1]
+  /*
+   * Totals are measured on the full track, never on the ~60 resampled
+   * waypoints: resampling exists for the forecast and straightens switchbacks,
+   * which understated distance badly.
+   *
+   * Distance is always full-resolution. Ascent can only be full-resolution when
+   * the GPX carried its own elevation; with the DEM fallback we only have
+   * heights at the sampled waypoints, so those totals stay coarse rather than
+   * being invented.
+   */
+  const totals =
+    eleSource === 'gpx'
+      ? trackTotals(points)
+      : trackTotals(
+          wps.map((w) => ({ lat: w.lat, lon: w.lon, ele: w.eleM, time: null })),
+          0
+        )
+  const distM = trackTotals(points).distM
+
+  const waypoints = applyPace(wps, input.profile, rest, totals.ascentM)
+
 
   const trimmed = input.name?.trim()
   const gpxName = parsed.name !== 'Unnamed track' ? parsed.name : ''
@@ -95,8 +115,9 @@ export async function ingestGpx(input: {
     waypoints,
     simplified: simplifyForMap(points),
     bbox: bboxOf(points),
-    lengthM: last.cumDistM,
-    ascentM: last.cumAscentM,
+    lengthM: distM,
+    ascentM: totals.ascentM,
+    descentM: totals.descentM,
     eleSource,
     startAt: input.startAt ?? null,
     addedAt: Date.now()

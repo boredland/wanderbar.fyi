@@ -53,16 +53,12 @@ export default function Manage() {
         const byIdx = track.waypoints
         wps = wps.map((w, i) => ({ ...w, eleM: byIdx[i]?.eleM ?? null, cumAscentM: byIdx[i]?.cumAscentM ?? 0 }))
       }
-      const waypoints = applyPace(wps, profile, rest)
-      const last = waypoints[waypoints.length - 1]
-      await set('track', {
-        ...track,
-        profile,
-        rest,
-        waypoints,
-        lengthM: last.cumDistM,
-        ascentM: last.cumAscentM
-      })
+      // Same ascent scaling as ingest, so the ETA does not drift on a profile change.
+      const waypoints = applyPace(wps, profile, rest, track.ascentM)
+      // Distance and ascent are properties of the track, not of the pace, so
+      // they are left as measured at ingest rather than recomputed from the
+      // resampled waypoints.
+      await set('track', { ...track, profile, rest, waypoints })
       const kmBySeq: Record<number, number> = {}
       for (const w of waypoints) kmBySeq[w.seq] = w.cumDistM / 1000
       try {

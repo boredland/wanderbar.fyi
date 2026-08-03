@@ -13,6 +13,7 @@ import {
   resample,
   simplifyForMap,
   snapToTrack,
+  trackTotals,
   type Pt,
   type Waypoint
 } from './track'
@@ -116,6 +117,77 @@ describe('estimatePosition', () => {
 
   it('returns 0 with neither fix nor start', () => {
     expect(estimatePosition(wps, null, null, Date.now())).toBe(0)
+  })
+})
+
+describe('trackTotals', () => {
+  it('measures a pure climb exactly, with no phantom descent', () => {
+    const ramp: Pt[] = Array.from({ length: 100 }, (_, i) => ({
+      lat: 47 + i * 1e-4,
+      lon: 11,
+      ele: 1000 + i * 10,
+      time: null
+    }))
+    const t = trackTotals(ramp)
+    expect(t.ascentM).toBeCloseTo(990, 5)
+    expect(t.descentM).toBe(0)
+  })
+
+  it('separates up from down on an out-and-back', () => {
+    const pts: Pt[] = []
+    for (let i = 0; i <= 50; i++) pts.push({ lat: 47 + i * 1e-4, lon: 11, ele: 1000 + i * 20, time: null })
+    for (let i = 49; i >= 0; i--) pts.push({ lat: 47 + i * 1e-4, lon: 11, ele: 1000 + i * 20, time: null })
+    const t = trackTotals(pts)
+    expect(t.ascentM).toBeCloseTo(1000, 0)
+    expect(t.descentM).toBeCloseTo(1000, 0)
+  })
+
+  it('rejects sub-threshold GPS jitter instead of accumulating it', () => {
+    // Flat walk with +/-1.5 m noise: a naive sum would invent hundreds of metres.
+    const noisy: Pt[] = Array.from({ length: 600 }, (_, i) => ({
+      lat: 47 + i * 1e-4,
+      lon: 11,
+      ele: 1000 + Math.sin(i) * 1.5,
+      time: null
+    }))
+    const t = trackTotals(noisy)
+    expect(t.ascentM).toBeLessThan(10)
+    expect(t.descentM).toBeLessThan(10)
+  })
+
+  it('measures the full track, not a resampled subset', () => {
+    // Switchbacks: resampling to ~60 waypoints cuts the corners and loses most
+    // of the real distance. This is the regression that reported 9.7km for a
+    // 12.7km route.
+    const zigzag: Pt[] = []
+    for (let i = 0; i < 2000; i++) {
+      zigzag.push({
+        lat: 47.42 + i * 1.8e-5 + Math.sin(i / 4) * 6e-5,
+        lon: 10.98 + i * 1.1e-5 + Math.cos(i / 4) * 1.2e-4,
+        ele: 800 + i * 0.4,
+        time: null
+      })
+    }
+    const full = trackTotals(zigzag).distM
+    const resampled = resample(zigzag)
+    const viaWaypoints = resampled[resampled.length - 1].cumDistM
+    // The resampled path is measurably shorter, which is exactly why totals
+    // must not be derived from it.
+    expect(viaWaypoints).toBeLessThan(full * 0.9)
+    let expected = 0
+    for (let i = 1; i < zigzag.length; i++) expected += haversineM(zigzag[i - 1], zigzag[i])
+    expect(full).toBeCloseTo(expected, 5)
+  })
+
+  it('ignores points with no elevation without throwing', () => {
+    const mixed: Pt[] = [
+      { lat: 47, lon: 11, ele: 1000, time: null },
+      { lat: 47.001, lon: 11, ele: null, time: null },
+      { lat: 47.002, lon: 11, ele: 1050, time: null }
+    ]
+    const t = trackTotals(mixed)
+    expect(t.ascentM).toBeCloseTo(50, 5)
+    expect(t.distM).toBeGreaterThan(0)
   })
 })
 

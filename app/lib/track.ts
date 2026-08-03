@@ -29,6 +29,63 @@ const R_EARTH_M = 6371008.8
 /** Elevation deltas below this are DEM/GPS jitter, not climbing. */
 const ASCENT_NOISE_M = 3
 
+/**
+ * Totals measured on the FULL track, never on the resampled waypoints.
+ *
+ * Resampling exists to keep the forecast to ~60 points; it straightens
+ * switchbacks and smooths the profile, which understated distance by up to 70%
+ * and ascent by ~20% on a real trail when these figures were derived from it.
+ *
+ * `noiseM` is a hysteresis threshold, the same idea every serious tool uses:
+ * only count a direction change once it exceeds the sensor's own jitter, so
+ * metre-scale GPS wobble does not accumulate into hundreds of phantom metres.
+ */
+export function trackTotals(
+  points: Pt[],
+  noiseM = 3
+): { distM: number; ascentM: number; descentM: number } {
+  let distM = 0
+  for (let i = 1; i < points.length; i++) distM += haversineM(points[i - 1], points[i])
+
+  let ascentM = 0
+  let descentM = 0
+  // Hysteresis: hold a reference height and only commit a gain or loss once the
+  // move away from it clears the noise floor.
+  let ref: number | null = null
+  let dir: 0 | 1 | -1 = 0
+  for (const p of points) {
+    if (p.ele === null) continue
+    if (ref === null) {
+      ref = p.ele
+      continue
+    }
+    const delta = p.ele - ref
+    if (dir >= 0 && delta >= noiseM) {
+      ascentM += delta
+      ref = p.ele
+      dir = 1
+    } else if (dir <= 0 && delta <= -noiseM) {
+      descentM += -delta
+      ref = p.ele
+      dir = -1
+    } else if (dir === 1 && delta <= -noiseM) {
+      descentM += -delta
+      ref = p.ele
+      dir = -1
+    } else if (dir === -1 && delta >= noiseM) {
+      ascentM += delta
+      ref = p.ele
+      dir = 1
+    } else if ((dir === 1 && delta > 0) || (dir === -1 && delta < 0)) {
+      // Continuing in the same direction: extend without resetting hysteresis.
+      if (dir === 1) ascentM += delta
+      else descentM += -delta
+      ref = p.ele
+    }
+  }
+  return { distM, ascentM, descentM }
+}
+
 /** Horizontal distance only: the pace profiles already price climbing. */
 export function haversineM(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
   const toRad = Math.PI / 180
@@ -153,19 +210,29 @@ export type RestId = keyof typeof REST_FACTORS
 /** Most people stop to eat and look at things; moving time alone runs short. */
 export const DEFAULT_REST: RestId = 'normal'
 
-/** Applies pace per segment so the ETA curve reflects where the climbing is. */
+/**
+ * Applies pace per segment so the ETA curve reflects where the climbing is.
+ *
+ * `trueAscentM` scales the per-segment climb so it sums to the total measured on
+ * the full track. Resampling smooths the profile, so without it the ETA prices a
+ * gentler hill than the one being walked.
+ */
 export function applyPace(
   wps: Waypoint[],
   profile: ProfileId,
-  rest: RestId = DEFAULT_REST
+  rest: RestId = DEFAULT_REST,
+  trueAscentM?: number
 ): Waypoint[] {
   const factor = REST_FACTORS[rest].factor
+  const sampled = wps[wps.length - 1]?.cumAscentM ?? 0
+  const climbScale =
+    trueAscentM !== undefined && sampled > 0 ? trueAscentM / sampled : 1
   let eta = 0
   return wps.map((w, i) => {
     if (i > 0) {
       const prev = wps[i - 1]
       const dist = w.cumDistM - prev.cumDistM
-      const ascent = w.cumAscentM - prev.cumAscentM
+      const ascent = (w.cumAscentM - prev.cumAscentM) * climbScale
       const drop =
         prev.eleM !== null && w.eleM !== null ? Math.max(0, prev.eleM - w.eleM) : 0
       eta += paceTime(profile, dist, ascent, drop) * factor
