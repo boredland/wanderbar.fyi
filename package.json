@@ -1,0 +1,32 @@
+{
+  "name": "wanderbar",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build:sw": "esbuild app/sw/index.ts --bundle --format=esm --target=es2022 --outfile=public/sw.js",
+    "build": "npm run build:sw && vite build --mode client && vite build",
+    "preview": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "test": "vitest run"
+  },
+  "private": true,
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^1.0.2",
+    "fast-xml-parser": "^5.10.1",
+    "hono": "^4.12.34",
+    "honox": "0.1.60",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260712.1",
+    "@hono/vite-build": "^1.11.1",
+    "@hono/vite-dev-server": "^0.26.1",
+    "@tailwindcss/vite": "^4.3.2",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^26.1.2",
+    "tailwindcss": "^4.3.2",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.110.0"
+  }
+}

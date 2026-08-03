@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wanderbar",
+  "main": "./dist/index.js",
+  "compatibility_date": "2026-08-03",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": "./dist"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WAKER",
+        "class_name": "Waker"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "Waker"
+      ]
+    }
+  ],
+  "vars": {
+    "MET_USER_AGENT": "wanderbar.fyi/1.0 (https://wanderbar.fyi)",
+    "VAPID_SUBJECT": "mailto:admin@wanderbar.fyi",
+    "VAPID_PUBLIC_KEY": "BIV7EA_6_y2KIlijRyvNglkNZ1ISrdadrFDL8mdMy4m_x4mnz5ZyE76qv6oP2-C4c7kUfg3iJF3mi3qAIQd-52w"
+  }
+}

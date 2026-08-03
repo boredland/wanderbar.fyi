@@ -1,0 +1,235 @@
+export type Pt = { lat: number; lon: number; ele: number | null; time: number | null }
+export type Waypoint = {
+  seq: number
+  lat: number
+  lon: number
+  eleM: number | null
+  cumDistM: number
+  cumAscentM: number
+  etaOffsetS: number
+}
+export type ProfileId = 'hiking' | 'mountain' | 'running' | 'cycling' | 'ski'
+
+export const PROFILES: Record<
+  ProfileId,
+  { label: string; kmh: number; ascentMh: number; descentMh: number | null }
+> = {
+  hiking: { label: 'Hiking', kmh: 4, ascentMh: 300, descentMh: 500 },
+  mountain: { label: 'Mountain hiking', kmh: 4, ascentMh: 400, descentMh: 800 },
+  running: { label: 'Trail running', kmh: 11, ascentMh: 750, descentMh: 1000 },
+  cycling: { label: 'Cycling', kmh: 20, ascentMh: 700, descentMh: null },
+  ski: { label: 'Ski touring', kmh: 4, ascentMh: 300, descentMh: 1200 }
+}
+
+const R_EARTH_M = 6371008.8
+
+/** Elevation deltas below this are DEM/GPS jitter, not climbing. */
+const ASCENT_NOISE_M = 3
+
+/** Horizontal distance only: the pace profiles already price climbing. */
+export function haversineM(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
+  const toRad = Math.PI / 180
+  const dLat = (b.lat - a.lat) * toRad
+  const dLon = (b.lon - a.lon) * toRad
+  const la1 = a.lat * toRad
+  const la2 = b.lat * toRad
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2
+  return 2 * R_EARTH_M * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t
+
+export function resample(points: Pt[], spacingM = 2000): Waypoint[] {
+  if (points.length === 0) return []
+  if (points.length === 1) {
+    return [
+      {
+        seq: 0,
+        lat: points[0].lat,
+        lon: points[0].lon,
+        eleM: points[0].ele,
+        cumDistM: 0,
+        cumAscentM: 0,
+        etaOffsetS: 0
+      }
+    ]
+  }
+
+  let total = 0
+  const legs: number[] = []
+  for (let i = 1; i < points.length; i++) {
+    const d = haversineM(points[i - 1], points[i])
+    legs.push(d)
+    total += d
+  }
+
+  // Cap at 60 waypoints: keeps one Open-Meteo call far inside the rate budget
+  // and the map legible.
+  const spacing = Math.max(spacingM, total / 59)
+
+  const picked: Pt[] = [points[0]]
+  let travelled = 0
+  let nextMark = spacing
+  for (let i = 1; i < points.length; i++) {
+    const leg = legs[i - 1]
+    while (leg > 0 && travelled + leg >= nextMark) {
+      const t = (nextMark - travelled) / leg
+      const a = points[i - 1]
+      const b = points[i]
+      picked.push({
+        lat: lerp(a.lat, b.lat, t),
+        lon: lerp(a.lon, b.lon, t),
+        ele: a.ele !== null && b.ele !== null ? lerp(a.ele, b.ele, t) : (b.ele ?? a.ele),
+        time: null
+      })
+      nextMark += spacing
+    }
+    travelled += leg
+  }
+  const last = points[points.length - 1]
+  const tail = picked[picked.length - 1]
+  if (tail.lat !== last.lat || tail.lon !== last.lon) picked.push(last)
+
+  const out: Waypoint[] = []
+  let cumDist = 0
+  let cumAscent = 0
+  for (let i = 0; i < picked.length; i++) {
+    if (i > 0) {
+      cumDist += haversineM(picked[i - 1], picked[i])
+      const prevEle = picked[i - 1].ele
+      const ele = picked[i].ele
+      if (prevEle !== null && ele !== null) {
+        const d = ele - prevEle
+        if (d > ASCENT_NOISE_M) cumAscent += d
+      }
+    }
+    out.push({
+      seq: i,
+      lat: picked[i].lat,
+      lon: picked[i].lon,
+      eleM: picked[i].ele,
+      cumDistM: cumDist,
+      cumAscentM: cumAscent,
+      etaOffsetS: 0
+    })
+  }
+  return out
+}
+
+/** Seconds for one segment under a profile. Cycling adds climb time linearly. */
+export function paceTime(
+  profile: ProfileId,
+  distM: number,
+  ascentM: number,
+  descentM: number
+): number {
+  const p = PROFILES[profile]
+  if (p.descentMh === null) {
+    return (distM / 1000 / p.kmh + ascentM / p.ascentMh) * 3600
+  }
+  const th = distM / 1000 / p.kmh
+  const tv = ascentM / p.ascentMh + descentM / p.descentMh
+  return (Math.max(th, tv) + 0.5 * Math.min(th, tv)) * 3600
+}
+
+/** Applies pace per segment so the ETA curve reflects where the climbing is. */
+export function applyPace(wps: Waypoint[], profile: ProfileId): Waypoint[] {
+  let eta = 0
+  return wps.map((w, i) => {
+    if (i > 0) {
+      const prev = wps[i - 1]
+      const dist = w.cumDistM - prev.cumDistM
+      const ascent = w.cumAscentM - prev.cumAscentM
+      const drop =
+        prev.eleM !== null && w.eleM !== null ? Math.max(0, prev.eleM - w.eleM) : 0
+      eta += paceTime(profile, dist, ascent, drop)
+    }
+    return { ...w, etaOffsetS: eta }
+  })
+}
+
+export function simplifyForMap(points: Pt[], maxPoints = 500): [number, number][] {
+  if (points.length === 0) return []
+  const step = Math.ceil(points.length / maxPoints)
+  const round = (v: number) => Math.round(v * 1e5) / 1e5
+  const out: [number, number][] = []
+  for (let i = 0; i < points.length; i += step) out.push([round(points[i].lat), round(points[i].lon)])
+  const last = points[points.length - 1]
+  const tail = out[out.length - 1]
+  if (!tail || tail[0] !== round(last.lat) || tail[1] !== round(last.lon)) {
+    out.push([round(last.lat), round(last.lon)])
+  }
+  return out
+}
+
+export function bboxOf(points: Pt[]): [number, number, number, number] {
+  let minLat = Infinity
+  let minLon = Infinity
+  let maxLat = -Infinity
+  let maxLon = -Infinity
+  for (const p of points) {
+    if (p.lat < minLat) minLat = p.lat
+    if (p.lat > maxLat) maxLat = p.lat
+    if (p.lon < minLon) minLon = p.lon
+    if (p.lon > maxLon) maxLon = p.lon
+  }
+  return [minLat, minLon, maxLat, maxLon]
+}
+
+/** 2D by design: GPS altitude is the wrong datum and too noisy to help. */
+export function snapToTrack(
+  wps: Waypoint[],
+  lat: number,
+  lon: number
+): { seq: number; distM: number } {
+  if (wps.length === 0) return { seq: 0, distM: 0 }
+  if (wps.length === 1) return { seq: 0, distM: haversineM(wps[0], { lat, lon }) }
+
+  const meanLat = ((wps[0].lat + wps[wps.length - 1].lat) / 2) * (Math.PI / 180)
+  const kx = Math.cos(meanLat) * (Math.PI / 180) * R_EARTH_M
+  const ky = (Math.PI / 180) * R_EARTH_M
+  const px = lon * kx
+  const py = lat * ky
+
+  let best = { seq: 0, distM: Infinity }
+  for (let i = 1; i < wps.length; i++) {
+    const ax = wps[i - 1].lon * kx
+    const ay = wps[i - 1].lat * ky
+    const bx = wps[i].lon * kx
+    const by = wps[i].lat * ky
+    const dx = bx - ax
+    const dy = by - ay
+    const len2 = dx * dx + dy * dy
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2))
+    const cx = ax + t * dx
+    const cy = ay + t * dy
+    const d = Math.hypot(px - cx, py - cy)
+    if (d < best.distM) best = { seq: t < 0.5 ? i - 1 : i, distM: d }
+  }
+  return best
+}
+
+export function estimatePosition(
+  wps: Waypoint[],
+  lastFix: { at: number; snappedSeq: number } | null,
+  startedAt: number | null,
+  now: number
+): number {
+  if (wps.length === 0) return 0
+  let elapsedFrom: number
+  if (lastFix) {
+    const base = wps[Math.min(lastFix.snappedSeq, wps.length - 1)]?.etaOffsetS ?? 0
+    elapsedFrom = base + (now - lastFix.at) / 1000
+  } else if (startedAt !== null) {
+    elapsedFrom = (now - startedAt) / 1000
+  } else {
+    return 0
+  }
+  let seq = 0
+  for (const w of wps) {
+    if (w.etaOffsetS <= elapsedFrom) seq = w.seq
+    else break
+  }
+  return Math.min(seq, wps.length - 1)
+}

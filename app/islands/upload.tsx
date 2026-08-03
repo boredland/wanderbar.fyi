@@ -1,0 +1,80 @@
+import { useState } from 'hono/jsx'
+import { ingestGpx } from '../lib/ingest'
+import { get } from '../lib/store'
+import { PROFILES, type ProfileId } from '../lib/track'
+
+export default function Upload(props: { shareError?: string }) {
+  const [error, setError] = useState<string | null>(props.shareError ?? null)
+  const [busy, setBusy] = useState(false)
+
+  const onSubmit = async (e: Event) => {
+    e.preventDefault()
+    const form = e.target as HTMLFormElement
+    const data = new FormData(form)
+    const file = data.get('gpx')
+    if (!(file instanceof File) || file.size === 0) {
+      setError('Choose a .gpx file first.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await ingestGpx({
+        xml: await file.text(),
+        name: String(data.get('name') ?? ''),
+        fallbackName: file.name,
+        profile: (String(data.get('profile')) as ProfileId) || 'hiking'
+      })
+      if (!result.ok) setError(result.error)
+      else dispatchEvent(new Event('wanderbar:changed'))
+    } catch {
+      setError('Could not read that file.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <form class="flex flex-col gap-4" onSubmit={onSubmit}>
+      <label class="flex flex-col gap-2">
+        <span class="text-[14px] text-[--color-muted]">GPX track</span>
+        <input
+          type="file"
+          name="gpx"
+          accept=".gpx,application/gpx+xml,application/xml,text/xml"
+          class="min-h-[44px]"
+          required
+        />
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="text-[14px] text-[--color-muted]">Name (optional)</span>
+        <input
+          type="text"
+          name="name"
+          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+        />
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="text-[14px] text-[--color-muted]">Pace profile</span>
+        <select
+          name="profile"
+          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+        >
+          {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
+            <option key={id} value={id}>
+              {PROFILES[id].label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="submit"
+        class="min-h-[44px] rounded-[6px] bg-[--color-brand] px-4 font-medium text-[--color-ink] disabled:opacity-60"
+        disabled={busy}
+      >
+        {busy ? 'Adding…' : 'Add track'}
+      </button>
+      {error ? <p class="text-[14px] text-[--color-warn]">{error}</p> : null}
+    </form>
+  )
+}

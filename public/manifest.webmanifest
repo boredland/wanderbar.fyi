@@ -1,0 +1,29 @@
+{
+  "name": "wanderbar",
+  "short_name": "wanderbar",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f97316",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "launch_handler": { "client_mode": ["focus-existing", "navigate-existing"] },
+  "share_target": {
+    "action": "/api/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "files": [
+        {
+          "name": "gpx",
+          "accept": ["application/gpx+xml", "application/xml", "text/xml", "application/octet-stream", ".gpx"]
+        }
+      ]
+    }
+  }
+}

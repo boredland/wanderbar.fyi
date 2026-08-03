@@ -1,0 +1,64 @@
+@import 'tailwindcss' source('../app');
+
+@theme {
+  --color-ink: #1c1917;
+  --color-muted: #57534e;
+  --color-line: #e7e5e4;
+  --color-surface: #ffffff;
+  --color-raised: #fafaf9;
+  --color-brand: #f97316;
+  --color-warn: #b91c1c;
+  --color-clear: #166534;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 36px;
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-10: 40px;
+
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+
+  --shadow-map: 0 1px 3px rgb(28 25 23 / 0.12);
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-surface);
+  font-size: var(--text-base);
+}
+
+.figures {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.wx-marker {
+  background: none;
+  border: none;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none;
+    transition: none;
+  }
+}
