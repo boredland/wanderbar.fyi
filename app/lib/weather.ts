@@ -13,7 +13,10 @@ export type Hour = {
   capeJkg: number | null
 }
 
-export type WaypointForecast = { seq: number; hours: Hour[] }
+export type WaypointForecast = { seq: number; hours: Hour[]; sun: SunDay[] }
+
+/** Civil sunrise/sunset per local day, used to judge darkness on the track. */
+export type SunDay = { sunriseMs: number; sunsetMs: number }
 
 export type MetPoint = {
   hours: Hour[]
@@ -36,7 +39,7 @@ const HOURLY_VARS = [
 ].join(',')
 
 type OpenMeteoHourly = Record<string, (number | null)[] | string[]>
-type OpenMeteoResponse = { hourly?: OpenMeteoHourly }
+type OpenMeteoResponse = { hourly?: OpenMeteoHourly; daily?: Record<string, string[]> }
 
 const at = (arr: unknown, i: number): number | null => {
   const v = Array.isArray(arr) ? arr[i] : null
@@ -53,6 +56,7 @@ export async function fetchOpenMeteo(
   url.searchParams.set('latitude', wps.map((w) => w.lat.toFixed(4)).join(','))
   url.searchParams.set('longitude', wps.map((w) => w.lon.toFixed(4)).join(','))
   url.searchParams.set('hourly', HOURLY_VARS)
+  url.searchParams.set('daily', 'sunrise,sunset')
   url.searchParams.set('forecast_days', String(days))
   url.searchParams.set('timezone', 'UTC')
 
@@ -66,6 +70,13 @@ export async function fetchOpenMeteo(
   // matched to waypoints strictly by array index, never by coordinate.
   return wps.map((w, i) => {
     const hourly = (list[i]?.hourly ?? {}) as OpenMeteoHourly
+    const daily = (list[i]?.daily ?? {}) as Record<string, string[]>
+    const rises = daily.sunrise ?? []
+    const sets = daily.sunset ?? []
+    const sun: SunDay[] = rises.map((r, k) => ({
+      sunriseMs: Date.parse(`${r}Z`),
+      sunsetMs: Date.parse(`${sets[k]}Z`)
+    }))
     const times = (hourly.time ?? []) as string[]
     const hours: Hour[] = times.map((t, j) => ({
       t: Date.parse(`${t}Z`),
@@ -79,7 +90,7 @@ export async function fetchOpenMeteo(
       code: at(hourly.weather_code, j),
       capeJkg: at(hourly.cape, j)
     }))
-    return { seq: w.seq, hours }
+    return { seq: w.seq, hours, sun }
   })
 }
 

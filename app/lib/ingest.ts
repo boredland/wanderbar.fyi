@@ -1,7 +1,15 @@
 import { clearTrack, set, type Track } from './store'
 import { syncNow } from './sync'
 import { parseGpx } from './gpx'
-import { applyPace, bboxOf, haversineM, resample, simplifyForMap, type ProfileId } from './track'
+import {
+  applyPace,
+  bboxOf,
+  haversineM,
+  resample,
+  simplifyForMap,
+  type ProfileId,
+  type RestId
+} from './track'
 import { fillElevations } from './weather'
 
 export type IngestResult = { ok: true; track: Track } | { ok: false; error: string }
@@ -15,6 +23,7 @@ export async function ingestGpx(input: {
   shareTitle?: string
   fallbackName?: string
   profile: ProfileId
+  rest?: RestId
   startAt?: number | null
 }): Promise<IngestResult> {
   let parsed
@@ -57,7 +66,8 @@ export async function ingestGpx(input: {
     })
   }
 
-  const waypoints = applyPace(wps, input.profile)
+  const rest: RestId = input.rest ?? 'none'
+  const waypoints = applyPace(wps, input.profile, rest)
   const last = waypoints[waypoints.length - 1]
 
   const trimmed = input.name?.trim()
@@ -78,6 +88,7 @@ export async function ingestGpx(input: {
     name: name.slice(0, 120),
     nameSource,
     profile: input.profile,
+    rest,
     gpxText: input.xml,
     waypoints,
     simplified: simplifyForMap(points),

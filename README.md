@@ -40,6 +40,9 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
   stored for diagnostics and read by nothing.
 - **Elevation is single-source per track** (`eleSource`): all-GPX, or all-DEM.
   Mixing them fabricates ascent at every boundary.
+- **The pace constants are moving time only.** DIN 33466 and the SAC scale both
+  exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
+  picks, never a tweak to the published numbers.
 - **Schedules are whole hours only.** No minute field exists in `Schedule`.
 
 ### The push is a wake-up, not a warning

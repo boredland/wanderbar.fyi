@@ -133,8 +133,27 @@ export function paceTime(
   return (Math.max(th, tv) + 0.5 * Math.min(th, tv)) * 3600
 }
 
+/**
+ * The published profile constants describe *moving* time: DIN 33466 and the SAC
+ * scale both exclude breaks. Rather than tuning those numbers by feel, rest is
+ * an explicit multiplier the user sets, so the book pace stays recognisable.
+ */
+export const REST_FACTORS = {
+  none: { label: 'No stops', factor: 1 },
+  short: { label: 'Short breaks', factor: 1.1 },
+  normal: { label: 'Normal breaks', factor: 1.2 },
+  leisurely: { label: 'Long breaks', factor: 1.35 }
+} as const
+
+export type RestId = keyof typeof REST_FACTORS
+
 /** Applies pace per segment so the ETA curve reflects where the climbing is. */
-export function applyPace(wps: Waypoint[], profile: ProfileId): Waypoint[] {
+export function applyPace(
+  wps: Waypoint[],
+  profile: ProfileId,
+  rest: RestId = 'none'
+): Waypoint[] {
+  const factor = REST_FACTORS[rest].factor
   let eta = 0
   return wps.map((w, i) => {
     if (i > 0) {
@@ -143,7 +162,7 @@ export function applyPace(wps: Waypoint[], profile: ProfileId): Waypoint[] {
       const ascent = w.cumAscentM - prev.cumAscentM
       const drop =
         prev.eleM !== null && w.eleM !== null ? Math.max(0, prev.eleM - w.eleM) : 0
-      eta += paceTime(profile, dist, ascent, drop)
+      eta += paceTime(profile, dist, ascent, drop) * factor
     }
     return { ...w, etaOffsetS: eta }
   })

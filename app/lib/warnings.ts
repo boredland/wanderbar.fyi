@@ -1,5 +1,5 @@
 import type { Waypoint } from './track'
-import type { Hour, WaypointForecast } from './weather'
+import type { Hour, SunDay, WaypointForecast } from './weather'
 
 export type Condition =
   | 'rain'
@@ -9,6 +9,7 @@ export type Condition =
   | 'heat'
   | 'blizzard'
   | 'thunderstorm'
+  | 'darkness'
 
 export type Warning = {
   seq: number
@@ -32,7 +33,8 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
     snow: true,
     heat: true,
     blizzard: true,
-    thunderstorm: true
+    thunderstorm: true,
+    darkness: true
   },
   heatC: 30,
   windKmh: 50,
@@ -66,6 +68,13 @@ export function evaluateWarnings(
     const wp = bySeq.get(wf.seq)
     if (!wp || wp.seq < currentSeq) continue
     const etaMs = anchorMs + wp.etaOffsetS * 1000
+
+    // Darkness depends only on where the ETA falls relative to that day's sun
+    // times, so it is judged per waypoint rather than per forecast hour.
+    if (thresholds.enabled.darkness) {
+      const dark = darknessAt(wf.sun, etaMs)
+      if (dark) out.push({ seq: wf.seq, condition: 'darkness', forecastHour: etaMs, detail: dark })
+    }
 
     // A warning's identity is (seq, condition), so several hours inside the
     // window must collapse to one entry: keep the hour closest to the ETA,
@@ -126,6 +135,41 @@ export function evaluateWarnings(
     }
   }
   return out
+}
+
+/** Civil twilight is roughly 30 min either side of the sun crossing. */
+const TWILIGHT_MS = 30 * 60_000
+
+/**
+ * Returns a human detail when the given time falls in darkness or twilight on
+ * the matching day, else null. Uses the day whose sun times bracket the time
+ * most closely, so a multi-day track is judged against the right date.
+ */
+function darknessAt(sun: SunDay[], atMs: number): string | null {
+  if (sun.length === 0) return null
+  let best = sun[0]
+  let bestGap = Infinity
+  for (const d of sun) {
+    const mid = (d.sunriseMs + d.sunsetMs) / 2
+    const gap = Math.abs(mid - atMs)
+    if (gap < bestGap) {
+      bestGap = gap
+      best = d
+    }
+  }
+  if (!Number.isFinite(best.sunriseMs) || !Number.isFinite(best.sunsetMs)) return null
+
+  const hhmm = (ms: number) =>
+    new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  if (atMs < best.sunriseMs - TWILIGHT_MS || atMs > best.sunsetMs + TWILIGHT_MS) {
+    return 'in the dark'
+  }
+  if (atMs < best.sunriseMs) return `before sunrise ${hhmm(best.sunriseMs)}`
+  if (atMs > best.sunsetMs) return `after sunset ${hhmm(best.sunsetMs)}`
+  // Approaching dusk is the case that catches people out on a descent.
+  if (best.sunsetMs - atMs <= TWILIGHT_MS) return `dusk, sunset ${hhmm(best.sunsetMs)}`
+  return null
 }
 
 export type Delta = { worsened: Warning[]; cleared: Warning[] }

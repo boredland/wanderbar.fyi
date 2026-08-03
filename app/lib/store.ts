@@ -1,5 +1,5 @@
 import { DEFAULT_SCHEDULE, type Schedule } from './schedule'
-import type { ProfileId, Waypoint } from './track'
+import type { ProfileId, RestId, Waypoint } from './track'
 import { DEFAULT_THRESHOLDS, type Thresholds, type Warning } from './warnings'
 import type { Hour, WaypointForecast } from './weather'
 
@@ -7,6 +7,8 @@ export type Track = {
   name: string
   nameSource: 'user' | 'gpx' | 'share' | 'filename'
   profile: ProfileId
+  /** Breaks are not in the published pace constants; this scales them. */
+  rest: RestId
   gpxText: string
   waypoints: Waypoint[]
   simplified: [number, number][]
@@ -99,7 +101,25 @@ async function tx<T>(
 
 export async function get<K extends keyof Stored>(k: K): Promise<Stored[K]> {
   const v = await tx<Stored[K] | undefined>('readonly', (s) => s.get(k))
-  return v === undefined ? DEFAULTS[k] : v
+  if (v === undefined) return DEFAULTS[k]
+  // Tracks stored before a field existed still have to render.
+  if (k === 'track' && v !== null) {
+    const t = v as Track
+    return {
+      ...t,
+      rest: t.rest ?? 'none',
+      startAt: t.startAt ?? null
+    } as Stored[K]
+  }
+  if (k === 'thresholds') {
+    const t = v as Thresholds
+    return {
+      ...DEFAULT_THRESHOLDS,
+      ...t,
+      enabled: { ...DEFAULT_THRESHOLDS.enabled, ...t.enabled }
+    } as Stored[K]
+  }
+  return v
 }
 
 export async function set<K extends keyof Stored>(k: K, v: Stored[K]): Promise<void> {

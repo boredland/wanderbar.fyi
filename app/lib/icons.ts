@@ -93,7 +93,8 @@ export const conditionGlyph: Record<Condition, string> = {
   snow: '❄',
   heat: '🌡',
   blizzard: '🌬',
-  thunderstorm: '⛈'
+  thunderstorm: '⛈',
+  darkness: '🌙'
 }
 
 export const conditionLabel: Record<Condition, string> = {
@@ -103,7 +104,8 @@ export const conditionLabel: Record<Condition, string> = {
   snow: 'Snow',
   heat: 'Extreme heat',
   blizzard: 'Blizzard',
-  thunderstorm: 'Thunderstorm'
+  thunderstorm: 'Thunderstorm',
+  darkness: 'Darkness'
 }
 
 /** The 41 base names present in public/wx (83 files incl. day/night variants). */

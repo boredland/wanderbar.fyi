@@ -2,7 +2,14 @@ import { useCallback, useEffect, useState } from 'hono/jsx'
 import { notifyDelta } from '../lib/notify'
 import { clearTrack, get, set, type Track } from '../lib/store'
 import { syncNow } from '../lib/sync'
-import { applyPace, PROFILES, resample, type ProfileId } from '../lib/track'
+import {
+  applyPace,
+  PROFILES,
+  resample,
+  REST_FACTORS,
+  type ProfileId,
+  type RestId
+} from '../lib/track'
 import { parseGpx } from '../lib/gpx'
 
 const changed = () => dispatchEvent(new Event('wanderbar:changed'))
@@ -35,7 +42,7 @@ export default function Manage() {
     changed()
   }
 
-  const changeProfile = async (profile: ProfileId) => {
+  const rederive = async (profile: ProfileId, rest: RestId) => {
     setBusy(true)
     try {
       // Re-derive from the stored GPX so every ETA reflects the new pace, and
@@ -46,11 +53,12 @@ export default function Manage() {
         const byIdx = track.waypoints
         wps = wps.map((w, i) => ({ ...w, eleM: byIdx[i]?.eleM ?? null, cumAscentM: byIdx[i]?.cumAscentM ?? 0 }))
       }
-      const waypoints = applyPace(wps, profile)
+      const waypoints = applyPace(wps, profile, rest)
       const last = waypoints[waypoints.length - 1]
       await set('track', {
         ...track,
         profile,
+        rest,
         waypoints,
         lengthM: last.cumDistM,
         ascentM: last.cumAscentM
@@ -110,7 +118,9 @@ export default function Manage() {
           class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
           disabled={busy}
           value={track.profile}
-          onChange={(e) => changeProfile((e.target as HTMLSelectElement).value as ProfileId)}
+          onChange={(e) =>
+            rederive((e.target as HTMLSelectElement).value as ProfileId, track.rest)
+          }
         >
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
             <option key={id} value={id} selected={id === track.profile}>
@@ -118,6 +128,27 @@ export default function Manage() {
             </option>
           ))}
         </select>
+      </label>
+
+      <label class="flex flex-col gap-2">
+        <span class="text-[14px] text-[--color-muted]">Breaks</span>
+        <select
+          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          disabled={busy}
+          value={track.rest}
+          onChange={(e) =>
+            rederive(track.profile, (e.target as HTMLSelectElement).value as RestId)
+          }
+        >
+          {(Object.keys(REST_FACTORS) as RestId[]).map((id) => (
+            <option key={id} value={id} selected={id === track.rest}>
+              {REST_FACTORS[id].label}
+            </option>
+          ))}
+        </select>
+        <span class="text-[12px] text-[--color-muted]">
+          The pace standards count moving time only.
+        </span>
       </label>
 
       <button

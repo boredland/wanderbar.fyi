@@ -8,7 +8,7 @@ import {
   type Warning
 } from './warnings'
 import type { Waypoint } from './track'
-import type { Hour, WaypointForecast } from './weather'
+import type { Hour, SunDay, WaypointForecast } from './weather'
 
 const NOW = 1_800_000_000_000
 
@@ -36,7 +36,12 @@ const hour = (over: Partial<Hour> = {}): Hour => ({
   ...over
 })
 
-const forecast = (h: Hour, seq = 0): WaypointForecast[] => [{ seq, hours: [h] }]
+/** NOW sits mid-daylight, so darkness never fires unless a test asks for it. */
+const DAYLIGHT: SunDay[] = [{ sunriseMs: NOW - 6 * 3600_000, sunsetMs: NOW + 6 * 3600_000 }]
+
+const forecast = (h: Hour, seq = 0): WaypointForecast[] => [
+  { seq, hours: [h], sun: DAYLIGHT }
+]
 
 const conditions = (ws: Warning[]): Condition[] => ws.map((w) => w.condition).sort()
 
@@ -89,11 +94,60 @@ describe('evaluateWarnings', () => {
   it('skips waypoints already behind the hiker', () => {
     const wps = [wp(0, 0), wp(1, 3600)]
     const fc: WaypointForecast[] = [
-      { seq: 0, hours: [hour({ gustKmh: 90 })] },
-      { seq: 1, hours: [hour({ t: NOW + 3600_000, gustKmh: 90 })] }
+      { seq: 0, hours: [hour({ gustKmh: 90 })], sun: DAYLIGHT },
+      { seq: 1, hours: [hour({ t: NOW + 3600_000, gustKmh: 90 })], sun: DAYLIGHT }
     ]
     const got = evaluateWarnings(DEFAULT_THRESHOLDS, fc, wps, 1, NOW)
     expect(got.map((w) => w.seq)).toEqual([1])
+  })
+})
+
+describe('darkness', () => {
+  const sun: SunDay[] = [
+    { sunriseMs: NOW - 2 * 3600_000, sunsetMs: NOW + 2 * 3600_000 }
+  ]
+  const at = (anchor: number) =>
+    evaluateWarnings(
+      DEFAULT_THRESHOLDS,
+      [{ seq: 0, hours: [hour({ t: anchor })], sun }],
+      [wp(0, 0)],
+      0,
+      anchor
+    ).filter((w) => w.condition === 'darkness')
+
+  it('stays quiet in broad daylight', () => {
+    expect(at(NOW)).toHaveLength(0)
+  })
+
+  it('warns well after sunset', () => {
+    const got = at(NOW + 5 * 3600_000)
+    expect(got).toHaveLength(1)
+    expect(got[0].detail).toBe('in the dark')
+  })
+
+  it('warns before sunrise', () => {
+    expect(at(NOW - 5 * 3600_000)[0].detail).toBe('in the dark')
+  })
+
+  it('flags the dusk window, which catches people out on a descent', () => {
+    expect(at(NOW + 2 * 3600_000 - 10 * 60_000)[0].detail).toMatch(/^dusk, sunset /)
+  })
+
+  it('flags the hour just after sunset separately from full dark', () => {
+    expect(at(NOW + 2 * 3600_000 + 10 * 60_000)[0].detail).toMatch(/^after sunset /)
+  })
+
+  it('honours the disabled toggle', () => {
+    const t = { ...DEFAULT_THRESHOLDS, enabled: { ...DEFAULT_THRESHOLDS.enabled, darkness: false } }
+    const anchor = NOW + 5 * 3600_000
+    const got = evaluateWarnings(t, [{ seq: 0, hours: [hour({ t: anchor })], sun }], [wp(0, 0)], 0, anchor)
+    expect(got.filter((w) => w.condition === 'darkness')).toHaveLength(0)
+  })
+
+  it('does not throw when sun data is missing', () => {
+    expect(() =>
+      evaluateWarnings(DEFAULT_THRESHOLDS, [{ seq: 0, hours: [hour()], sun: [] }], [wp(0, 0)], 0, NOW)
+    ).not.toThrow()
   })
 })
 
@@ -104,7 +158,13 @@ describe('one warning per waypoint and condition', () => {
       hour({ t: NOW, tempC: 34, apparentC: 34 }),
       hour({ t: NOW + 3600_000, tempC: 32, apparentC: 32 })
     ]
-    const got = evaluateWarnings(DEFAULT_THRESHOLDS, [{ seq: 0, hours }], [wp(0, 0)], 0, NOW)
+    const got = evaluateWarnings(
+      DEFAULT_THRESHOLDS,
+      [{ seq: 0, hours, sun: DAYLIGHT }],
+      [wp(0, 0)],
+      0,
+      NOW
+    )
     expect(got).toHaveLength(1)
     // The ETA hour is 34 °C, not the neighbouring hours.
     expect(got[0].detail).toBe('34.0 °C')
@@ -122,13 +182,15 @@ describe('warning windows follow the start anchor', () => {
     const tomorrow = NOW + 86400_000
     const gusty = hour({ t: tomorrow, gustKmh: 80 })
     // Anchored to tomorrow, that hour lines up with the waypoint's ETA.
+    // Filtered to wind: the fixture's sun day makes tomorrow dark, which
+    // legitimately raises a darkness warning too.
     expect(
-      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(gusty), [wp(0, 0)], 0, tomorrow)
-    ).toHaveLength(1)
+      conditions(evaluateWarnings(DEFAULT_THRESHOLDS, forecast(gusty), [wp(0, 0)], 0, tomorrow))
+    ).toContain('wind')
     // Anchored to now, the same hour is a day away and must not fire.
     expect(
-      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(gusty), [wp(0, 0)], 0, NOW)
-    ).toHaveLength(0)
+      conditions(evaluateWarnings(DEFAULT_THRESHOLDS, forecast(gusty), [wp(0, 0)], 0, NOW))
+    ).not.toContain('wind')
   })
 })
 

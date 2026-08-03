@@ -12,7 +12,8 @@ const CONDITIONS: Condition[] = [
   'snow',
   'heat',
   'blizzard',
-  'thunderstorm'
+  'thunderstorm',
+  'darkness'
 ]
 
 export default function Settings() {
