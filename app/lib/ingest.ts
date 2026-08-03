@@ -8,6 +8,7 @@ import {
   haversineM,
   resample,
   simplifyForMap,
+  DEFAULT_REST,
   type ProfileId,
   type RestId
 } from './track'
@@ -67,7 +68,7 @@ export async function ingestGpx(input: {
     })
   }
 
-  const rest: RestId = input.rest ?? 'none'
+  const rest: RestId = input.rest ?? DEFAULT_REST
   const waypoints = applyPace(wps, input.profile, rest)
   const last = waypoints[waypoints.length - 1]
 

@@ -1,7 +1,7 @@
 import { useState } from 'hono/jsx'
 import { ingestGpx } from '../lib/ingest'
 import { get } from '../lib/store'
-import { PROFILES, type ProfileId } from '../lib/track'
+import { DEFAULT_PROFILE, DEFAULT_REST, PROFILES, REST_FACTORS, type ProfileId, type RestId } from '../lib/track'
 
 /** Whole-hour slots over Open-Meteo's 16-day range; see StartRow in track-view. */
 function startOptions(now: number) {
@@ -48,7 +48,8 @@ export default function Upload(props: { shareError?: string }) {
         xml: await file.text(),
         name: String(data.get('name') ?? ''),
         fallbackName: file.name,
-        profile: (String(data.get('profile')) as ProfileId) || 'hiking',
+        profile: (String(data.get('profile')) as ProfileId) || DEFAULT_PROFILE,
+        rest: (String(data.get('rest')) as RestId) || DEFAULT_REST,
         startAt: data.get('startAt') ? Number(data.get('startAt')) : null
       })
       if (!result.ok) setError(result.error)
@@ -95,13 +96,20 @@ export default function Upload(props: { shareError?: string }) {
       </label>
       <label class="flex flex-col gap-2">
         <span class="text-[14px] text-muted">Pace profile</span>
-        <select
-          name="profile"
-          class="field"
-        >
+        <select name="profile" class="field">
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
-            <option key={id} value={id}>
+            <option key={id} value={id} selected={id === DEFAULT_PROFILE}>
               {PROFILES[id].label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="flex flex-col gap-2">
+        <span class="text-[14px] text-muted">Breaks</span>
+        <select name="rest" class="field">
+          {(Object.keys(REST_FACTORS) as RestId[]).map((id) => (
+            <option key={id} value={id} selected={id === DEFAULT_REST}>
+              {REST_FACTORS[id].label}
             </option>
           ))}
         </select>

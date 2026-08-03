@@ -1,5 +1,5 @@
 import { DEFAULT_SCHEDULE, type Schedule } from './schedule'
-import type { ProfileId, RestId, Waypoint } from './track'
+import { DEFAULT_REST, type ProfileId, type RestId, type Waypoint } from './track'
 import { DEFAULT_THRESHOLDS, type Thresholds, type Warning } from './warnings'
 import type { Hour, WaypointForecast } from './weather'
 
@@ -109,7 +109,7 @@ export async function get<K extends keyof Stored>(k: K): Promise<Stored[K]> {
     const t = v as Track
     return {
       ...t,
-      rest: t.rest ?? 'none',
+      rest: t.rest ?? DEFAULT_REST,
       startAt: t.startAt ?? null
     } as Stored[K]
   }

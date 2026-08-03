@@ -10,6 +10,9 @@ export type Waypoint = {
 }
 export type ProfileId = 'hiking' | 'mountain' | 'running' | 'cycling' | 'ski'
 
+/** Mountain hiking suits the alpine terrain this is mostly used on. */
+export const DEFAULT_PROFILE: ProfileId = 'mountain'
+
 export const PROFILES: Record<
   ProfileId,
   { label: string; kmh: number; ascentMh: number; descentMh: number | null }
@@ -147,11 +150,14 @@ export const REST_FACTORS = {
 
 export type RestId = keyof typeof REST_FACTORS
 
+/** Most people stop to eat and look at things; moving time alone runs short. */
+export const DEFAULT_REST: RestId = 'normal'
+
 /** Applies pace per segment so the ETA curve reflects where the climbing is. */
 export function applyPace(
   wps: Waypoint[],
   profile: ProfileId,
-  rest: RestId = 'none'
+  rest: RestId = DEFAULT_REST
 ): Waypoint[] {
   const factor = REST_FACTORS[rest].factor
   let eta = 0

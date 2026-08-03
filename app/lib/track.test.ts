@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { parseGpx } from './gpx'
 import {
   applyPace,
+  DEFAULT_PROFILE,
+  DEFAULT_REST,
+  REST_FACTORS,
   bboxOf,
   estimatePosition,
   haversineM,
@@ -113,6 +116,27 @@ describe('estimatePosition', () => {
 
   it('returns 0 with neither fix nor start', () => {
     expect(estimatePosition(wps, null, null, Date.now())).toBe(0)
+  })
+})
+
+describe('defaults', () => {
+  it('starts on mountain hiking, for alpine terrain', () => {
+    expect(DEFAULT_PROFILE).toBe('mountain')
+  })
+
+  it('assumes normal breaks, since the pace standards exclude them', () => {
+    expect(DEFAULT_REST).toBe('normal')
+    expect(REST_FACTORS[DEFAULT_REST].factor).toBe(1.2)
+  })
+
+  it('applies the rest default when applyPace is not given one', () => {
+    const pts = line(120, (i) => 1200 + i * 6)
+    const implicit = applyPace(resample(pts), 'mountain')
+    const explicit = applyPace(resample(pts), 'mountain', DEFAULT_REST)
+    const bare = applyPace(resample(pts), 'mountain', 'none')
+    const last = (w: Waypoint[]) => w[w.length - 1].etaOffsetS
+    expect(last(implicit)).toBe(last(explicit))
+    expect(last(implicit)).toBeCloseTo(last(bare) * 1.2, 5)
   })
 })
 

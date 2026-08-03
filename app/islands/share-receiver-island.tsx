@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'hono/jsx'
 import { ingestGpx } from '../lib/ingest'
 import { get } from '../lib/store'
+import { DEFAULT_PROFILE } from '../lib/track'
 
 /**
  * The share POST hands the GPX to the client as JSON because the server stores
@@ -27,7 +28,7 @@ export default function ShareReceiver() {
         xml,
         shareTitle: title,
         fallbackName: filename,
-        profile: track?.profile ?? 'hiking'
+        profile: track?.profile ?? DEFAULT_PROFILE
       })
       if (result.ok) location.replace('/')
       else setError(result.error)
