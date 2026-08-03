@@ -102,6 +102,55 @@ describe('evaluateWarnings', () => {
   })
 })
 
+describe('fire danger', () => {
+  const date = new Date(NOW).toISOString().slice(0, 10)
+  const run = (fwi: number, min = DEFAULT_THRESHOLDS.fireDanger) =>
+    evaluateWarnings(
+      { ...DEFAULT_THRESHOLDS, fireDanger: min },
+      forecast(hour()),
+      [wp(0, 0)],
+      0,
+      NOW,
+      {},
+      { [date]: fwi }
+    ).filter((w) => w.condition === 'fire')
+
+  it('stays quiet below the configured class', () => {
+    // Default threshold is 'high' (FWI >= 21.3).
+    expect(run(12)).toHaveLength(0)
+  })
+
+  it('warns at and above the configured class', () => {
+    const got = run(30)
+    expect(got).toHaveLength(1)
+    expect(got[0].detail).toBe('high, FWI 30')
+  })
+
+  it('respects a stricter threshold', () => {
+    expect(run(30, 'extreme')).toHaveLength(0)
+    expect(run(60, 'extreme')[0].detail).toContain('extreme')
+  })
+
+  it('respects a looser threshold', () => {
+    expect(run(15, 'moderate')[0].detail).toContain('moderate')
+  })
+
+  it('stays quiet when no fire data is available for that day', () => {
+    expect(
+      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(hour()), [wp(0, 0)], 0, NOW, {}, {})
+        .filter((w) => w.condition === 'fire')
+    ).toHaveLength(0)
+  })
+
+  it('honours the disabled toggle', () => {
+    const t = { ...DEFAULT_THRESHOLDS, enabled: { ...DEFAULT_THRESHOLDS.enabled, fire: false } }
+    expect(
+      evaluateWarnings(t, forecast(hour()), [wp(0, 0)], 0, NOW, {}, { [date]: 99 })
+        .filter((w) => w.condition === 'fire')
+    ).toHaveLength(0)
+  })
+})
+
 describe('darkness', () => {
   const sun: SunDay[] = [
     { sunriseMs: NOW - 2 * 3600_000, sunsetMs: NOW + 2 * 3600_000 }

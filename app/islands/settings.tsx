@@ -3,6 +3,7 @@ import { conditionLabel } from '../lib/icons'
 import { notifyDelta } from '../lib/notify'
 import { get, set } from '../lib/store'
 import { syncNow } from '../lib/sync'
+import type { FireDanger } from '../lib/fwi'
 import { DEFAULT_THRESHOLDS, type Condition, type Thresholds } from '../lib/warnings'
 
 const CONDITIONS: Condition[] = [
@@ -13,7 +14,8 @@ const CONDITIONS: Condition[] = [
   'heat',
   'blizzard',
   'thunderstorm',
-  'darkness'
+  'darkness',
+  'fire'
 ]
 
 export default function Settings() {
@@ -71,6 +73,23 @@ export default function Settings() {
           <span class="text-[16px]">{conditionLabel[c]}</span>
         </label>
       ))}
+      <label class="flex items-center justify-between gap-4">
+        <span class="text-[14px]">Fire danger from</span>
+        <select
+          class="min-h-[44px] rounded-[6px] border border-[--color-line] px-3"
+          disabled={!t.enabled.fire}
+          value={t.fireDanger}
+          onChange={(e) =>
+            persist({ ...t, fireDanger: (e.target as HTMLSelectElement).value as FireDanger })
+          }
+        >
+          {(['moderate', 'high', 'very high', 'extreme'] as FireDanger[]).map((d) => (
+            <option key={d} value={d} selected={d === t.fireDanger}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </label>
       {num('heatC', 'Heat above (°C)', 20, 45, 0.5)}
       {num('windKmh', 'Gusts above (km/h)', 20, 120, 5)}
       {num('rainMm', 'Rain above (mm/h)', 0.5, 20, 0.5)}

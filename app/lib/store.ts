@@ -42,6 +42,8 @@ export type Forecast = {
   met: Record<number, Hour[]>
   metSymbols: Record<number, string | null>
   metThunder: Record<number, number | null>
+  /** Computed FWI per UTC date; see runFwi in ./fwi. */
+  fwiByDate: Record<string, number>
   warnings: Warning[]
 }
 

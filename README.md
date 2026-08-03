@@ -40,6 +40,12 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
   stored for diagnostics and read by nothing.
 - **Elevation is single-source per track** (`eleSource`): all-GPX, or all-DEM.
   Mixing them fabricates ascent at every boundary.
+- **Fire danger is computed, not fetched.** No public API serves a free
+  point-query Fire Weather Index (OpenWeatherMap's needs a paid key; EFFIS/GWIS
+  layers are WMS tiles with a broken WFS backend; CWFIS is Canada-only). So the
+  Canadian FWI System is implemented client-side in `app/lib/fwi.ts` from
+  Open-Meteo's `past_days` history, which needs no key. It is an **indication**,
+  never a substitute for an official fire ban.
 - **The pace constants are moving time only.** DIN 33466 and the SAC scale both
   exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
   picks, never a tweak to the published numbers.
@@ -62,6 +68,7 @@ on every wake; that is lock-screen spam.
 | `app/lib/gpx.ts` | GPX parsing (split out so the service worker stays small) |
 | `app/lib/warnings.ts` | Thresholds and the worsen/clear diff |
 | `app/lib/schedule.ts` | Whole-hour, DST-correct wake scheduling |
+| `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |
 | `app/lib/sync.ts` | Fetch → evaluate → diff → persist |

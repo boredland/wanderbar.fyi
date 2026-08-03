@@ -1,4 +1,5 @@
 import type { Waypoint } from './track'
+import { DANGER_ORDER, fireDanger, type FireDanger } from './fwi'
 import type { Hour, SunDay, WaypointForecast } from './weather'
 
 export type Condition =
@@ -10,6 +11,7 @@ export type Condition =
   | 'blizzard'
   | 'thunderstorm'
   | 'darkness'
+  | 'fire'
 
 export type Warning = {
   seq: number
@@ -23,6 +25,8 @@ export type Thresholds = {
   heatC: number
   windKmh: number
   rainMm: number
+  /** Minimum official danger class that warrants a warning. */
+  fireDanger: FireDanger
 }
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
@@ -34,11 +38,13 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
     heat: true,
     blizzard: true,
     thunderstorm: true,
-    darkness: true
+    darkness: true,
+    fire: true
   },
   heatC: 30,
   windKmh: 50,
-  rainMm: 2
+  rainMm: 2,
+  fireDanger: 'high'
 }
 
 const RAIN_CODES: Record<number, true> = { 61: true, 63: true, 65: true, 80: true, 81: true, 82: true }
@@ -59,7 +65,9 @@ export function evaluateWarnings(
   currentSeq: number,
   /** Absolute time of etaOffsetS === 0; see startAnchorMs in ./track. */
   anchorMs: number,
-  metExtras: Record<number, MetExtras> = {}
+  metExtras: Record<number, MetExtras> = {},
+  /** Computed FWI per UTC date (yyyy-mm-dd); see runFwi in ./fwi. */
+  fwiByDate: Record<string, number> = {}
 ): Warning[] {
   const bySeq = new Map(waypoints.map((w) => [w.seq, w]))
   const out: Warning[] = []
@@ -68,6 +76,24 @@ export function evaluateWarnings(
     const wp = bySeq.get(wf.seq)
     if (!wp || wp.seq < currentSeq) continue
     const etaMs = anchorMs + wp.etaOffsetS * 1000
+
+    // Fire danger is a daily, regional figure, so it attaches to the waypoint's
+    // day rather than joining the hourly window logic.
+    if (thresholds.enabled.fire) {
+      const date = new Date(etaMs).toISOString().slice(0, 10)
+      const value = fwiByDate[date]
+      if (value !== undefined) {
+        const danger = fireDanger(value)
+        if (DANGER_ORDER[danger] >= DANGER_ORDER[thresholds.fireDanger]) {
+          out.push({
+            seq: wf.seq,
+            condition: 'fire',
+            forecastHour: etaMs,
+            detail: `${danger}, FWI ${value.toFixed(0)}`
+          })
+        }
+      }
+    }
 
     // Darkness depends only on where the ETA falls relative to that day's sun
     // times, so it is judged per waypoint rather than per forecast hour.

@@ -1,7 +1,8 @@
+import { runFwi } from './fwi'
 import { get, set } from './store'
 import { estimatePosition, startAnchorMs } from './track'
 import { diffWarnings, evaluateWarnings, type Delta, type MetExtras } from './warnings'
-import { fetchMet, fetchOpenMeteo, type Hour } from './weather'
+import { fetchFwiInputs, fetchMet, fetchOpenMeteo, type Hour } from './weather'
 
 const EMPTY: Delta = { worsened: [], cleared: [] }
 
@@ -45,13 +46,29 @@ export async function syncNow(): Promise<Delta> {
       metExtras[seq] = { probabilityOfThunder: r.value.probabilityOfThunder }
     })
 
+    // Fire danger: one keyless call for 60 days of spin-up plus the forecast.
+    // Treated like MET, a cross-check that must never gate the sync.
+    const fwiByDate: Record<string, number> = {}
+    try {
+      const mid = remaining[Math.floor(remaining.length / 2)]
+      const inputs = await fetchFwiInputs(mid.lat, mid.lon, days)
+      // runFwi preserves input order, so zip back by index.
+      const run = runFwi(inputs, mid.lat)
+      inputs.forEach((day, i) => {
+        fwiByDate[new Date(day.t).toISOString().slice(0, 10)] = run[i].fwi
+      })
+    } catch {
+      // No fire data this sync; every other warning still stands.
+    }
+
     const next = evaluateWarnings(
       thresholds,
       waypoints,
       track.waypoints,
       currentSeq,
       anchorMs,
-      metExtras
+      metExtras,
+      fwiByDate
     )
     const prev = (await get('forecast'))?.warnings ?? []
     const delta = diffWarnings(prev, next)
@@ -63,6 +80,7 @@ export async function syncNow(): Promise<Delta> {
       met,
       metSymbols,
       metThunder,
+      fwiByDate,
       warnings: next
     })
     await set('lastFetchError', null)

@@ -1,3 +1,4 @@
+import type { FwiInput } from './fwi'
 import type { Waypoint } from './track'
 
 export type Hour = {
@@ -140,6 +141,49 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
     }
   })
   return { hours, symbolCode, probabilityOfThunder }
+}
+
+/** 60 days of spin-up is enough for FFMC and DMC to converge; DC keeps drifting. */
+const FWI_SPINUP_DAYS = 60
+
+/**
+ * Daily inputs for the fire-weather system: 60 days of history plus the
+ * forecast, in one keyless call. Open-Meteo's `past_days` covers the history,
+ * so no archive endpoint and no API key is needed.
+ */
+export async function fetchFwiInputs(
+  lat: number,
+  lon: number,
+  forecastDays: number
+): Promise<FwiInput[]> {
+  const url = new URL('https://api.open-meteo.com/v1/forecast')
+  url.searchParams.set('latitude', lat.toFixed(4))
+  url.searchParams.set('longitude', lon.toFixed(4))
+  url.searchParams.set(
+    'daily',
+    'temperature_2m_max,relative_humidity_2m_mean,wind_speed_10m_max,precipitation_sum'
+  )
+  url.searchParams.set('past_days', String(FWI_SPINUP_DAYS))
+  url.searchParams.set('forecast_days', String(Math.min(16, Math.max(1, forecastDays))))
+  url.searchParams.set('timezone', 'UTC')
+
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`fwi inputs ${res.status}`)
+  const json = (await res.json()) as { daily?: Record<string, (number | null)[] | string[]> }
+  const d = json.daily ?? {}
+  const times = (d.time ?? []) as string[]
+
+  const out: FwiInput[] = []
+  for (let i = 0; i < times.length; i++) {
+    const tempC = at(d.temperature_2m_max, i)
+    const rh = at(d.relative_humidity_2m_mean, i)
+    const windKmh = at(d.wind_speed_10m_max, i)
+    const precipMm = at(d.precipitation_sum, i)
+    // A gap would silently corrupt the running codes, so stop at the first one.
+    if (tempC === null || rh === null || windKmh === null || precipMm === null) break
+    out.push({ t: Date.parse(`${times[i]}T00:00:00Z`), tempC, rh, windKmh, precipMm })
+  }
+  return out
 }
 
 /** Copernicus DEM, orthometric like GPX <ele>. Max 100 coordinates per call. */
