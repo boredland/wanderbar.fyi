@@ -7,6 +7,7 @@ import {
   type Thresholds,
   type Warning
 } from './warnings'
+import { conditionLabel } from './icons'
 import type { Waypoint } from './track'
 import type { Hour, SunDay, WaypointForecast } from './weather'
 
@@ -102,6 +103,73 @@ describe('evaluateWarnings', () => {
   })
 })
 
+describe('warning detail copy', () => {
+  // The UI renders "Label (detail)", so a detail that restates its own label
+  // produces "Rain (2.4 mm/h rain)" or "Thunderstorm (thunderstorm)".
+  const everyCondition: Condition[] = [
+    'rain',
+    'hail',
+    'wind',
+    'snow',
+    'heat',
+    'blizzard',
+    'thunderstorm',
+    'darkness',
+    'fire'
+  ]
+
+  it('never repeats the condition label inside the detail', () => {
+    const extreme = hour({
+      tempC: 34,
+      apparentC: 34,
+      precipMm: 9,
+      precipProb: 95,
+      snowfallCm: 4,
+      windKmh: 80,
+      gustKmh: 95,
+      code: 96,
+      capeJkg: 1680
+    })
+    const date = new Date(NOW).toISOString().slice(0, 10)
+    const got = evaluateWarnings(
+      DEFAULT_THRESHOLDS,
+      [{ seq: 0, hours: [extreme], sun: [{ sunriseMs: NOW + 6 * 3600_000, sunsetMs: NOW + 12 * 3600_000 }] }],
+      [wp(0, 0)],
+      0,
+      NOW,
+      {},
+      { [date]: 44 }
+    )
+    expect(got.length).toBeGreaterThan(4)
+    for (const w of got) {
+      const label = conditionLabel[w.condition].toLowerCase()
+      expect(w.detail.toLowerCase(), `${w.condition}: "${w.detail}"`).not.toContain(label)
+      // Nor a bare noun the label already implies.
+      for (const word of label.split(' ')) {
+        expect(w.detail.toLowerCase(), `${w.condition}: "${w.detail}"`).not.toContain(word)
+      }
+      expect(w.detail, `${w.condition} has nested parens`).not.toMatch(/\(/)
+      expect(w.detail.length, `${w.condition} detail empty`).toBeGreaterThan(0)
+    }
+  })
+
+  it('describes thunderstorm strength in words, not raw CAPE joules', () => {
+    const run = (capeJkg: number | null) =>
+      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(hour({ code: 95, capeJkg })), [wp(0, 0)], 0, NOW)
+        .find((w) => w.condition === 'thunderstorm')!.detail
+    expect(run(1680)).toBe('strong updrafts')
+    expect(run(3200)).toBe('violent updrafts')
+    expect(run(500)).toBe('weak updrafts')
+    expect(run(100)).toBe('expected')
+    expect(run(null)).toBe('expected')
+    expect(run(1680)).not.toContain('1680')
+  })
+
+  it('covers every condition with a label', () => {
+    for (const c of everyCondition) expect(conditionLabel[c]).toBeTruthy()
+  })
+})
+
 describe('fire danger', () => {
   const date = new Date(NOW).toISOString().slice(0, 10)
   const run = (fwi: number, min = DEFAULT_THRESHOLDS.fireDanger) =>
@@ -168,14 +236,15 @@ describe('darkness', () => {
     expect(at(NOW)).toHaveLength(0)
   })
 
-  it('warns well after sunset', () => {
+  it('warns well after sunset, naming when light returns', () => {
     const got = at(NOW + 5 * 3600_000)
     expect(got).toHaveLength(1)
-    expect(got[0].detail).toBe('in the dark')
+    // The label already says "Darkness"; the detail carries the useful fact.
+    expect(got[0].detail).toMatch(/^sunrise /)
   })
 
   it('warns before sunrise', () => {
-    expect(at(NOW - 5 * 3600_000)[0].detail).toBe('in the dark')
+    expect(at(NOW - 5 * 3600_000)[0].detail).toMatch(/^sunrise /)
   })
 
   it('flags the dusk window, which catches people out on a descent', () => {

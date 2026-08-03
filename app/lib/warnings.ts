@@ -129,27 +129,23 @@ export function evaluateWarnings(
       const feels = h.apparentC ?? h.tempC
 
       if (precip >= thresholds.rainMm || (code !== null && RAIN_CODES[code] && prob >= 50)) {
-        push('rain', `${precip.toFixed(1)} mm/h rain`)
+        push('rain', `${precip.toFixed(1)} mm/h`)
       }
-      if (code !== null && HAIL_CODES[code]) push('hail', 'hail possible')
+      if (code !== null && HAIL_CODES[code]) push('hail', 'possible')
 
       const metThunder = metExtras[wf.seq]?.probabilityOfThunder
       if (
         (code !== null && THUNDER_CODES[code]) ||
         (metThunder !== null && metThunder !== undefined && metThunder >= 30)
       ) {
-        const cape = h.capeJkg
-        push(
-          'thunderstorm',
-          cape !== null && cape >= 1000 ? `thunderstorm (CAPE ${Math.round(cape)})` : 'thunderstorm'
-        )
+        push('thunderstorm', instabilityDetail(h.capeJkg))
       }
       if (gust >= thresholds.windKmh) push('wind', `gusts ${Math.round(gust)} km/h`)
 
       const snowing = snow > 0 || (code !== null && SNOW_CODES[code])
-      if (snowing) push('snow', snow > 0 ? `${snow.toFixed(1)} cm snow` : 'snow')
+      if (snowing) push('snow', snow > 0 ? `${snow.toFixed(1)} cm` : 'expected')
       if (snowing && gust >= 40 && temp !== null && temp <= 0) {
-        push('blizzard', `snow, gusts ${Math.round(gust)} km/h at ${temp.toFixed(0)} °C`)
+        push('blizzard', `gusts ${Math.round(gust)} km/h at ${temp.toFixed(0)} °C`)
       }
 
       const hot = Math.max(temp ?? -Infinity, feels ?? -Infinity)
@@ -188,14 +184,29 @@ function darknessAt(sun: SunDay[], atMs: number): string | null {
   const hhmm = (ms: number) =>
     new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-  if (atMs < best.sunriseMs - TWILIGHT_MS || atMs > best.sunsetMs + TWILIGHT_MS) {
-    return 'in the dark'
-  }
+  // "Darkness (in the dark)" says nothing; give the boundary that matters.
+  if (atMs > best.sunsetMs + TWILIGHT_MS) return `sunrise ${hhmm(best.sunriseMs)}`
+  if (atMs < best.sunriseMs - TWILIGHT_MS) return `sunrise ${hhmm(best.sunriseMs)}`
   if (atMs < best.sunriseMs) return `before sunrise ${hhmm(best.sunriseMs)}`
   if (atMs > best.sunsetMs) return `after sunset ${hhmm(best.sunsetMs)}`
   // Approaching dusk is the case that catches people out on a descent.
   if (best.sunsetMs - atMs <= TWILIGHT_MS) return `dusk, sunset ${hhmm(best.sunsetMs)}`
   return null
+}
+
+/**
+ * CAPE is convective available potential energy in J/kg: the buoyant energy
+ * available to a storm updraft. It is the fuel, not the fire, so it never
+ * triggers a warning on its own; it only describes how violent a storm that
+ * does fire would be. Bands follow standard convective forecasting practice.
+ */
+function instabilityDetail(capeJkg: number | null): string {
+  if (capeJkg === null) return 'expected'
+  if (capeJkg < 300) return 'expected'
+  if (capeJkg < 1000) return 'weak updrafts'
+  if (capeJkg < 2500) return 'strong updrafts'
+  if (capeJkg < 4000) return 'violent updrafts'
+  return 'extreme updrafts'
 }
 
 export type Delta = { worsened: Warning[]; cleared: Warning[] }
