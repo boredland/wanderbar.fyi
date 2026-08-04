@@ -143,7 +143,20 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
   return { hours, symbolCode, probabilityOfThunder }
 }
 
-/** 60 days of spin-up is enough for FFMC and DMC to converge; DC keeps drifting. */
+/**
+ * Days of history fed to the fire-weather codes before the forecast starts.
+ *
+ * 60 is a ceiling, not just a preference. Open-Meteo's forecast endpoint backs
+ * `past_days` with a reanalysis that trails the present, and past roughly 60 it
+ * starts the series with a long run of nulls instead of refusing the request:
+ * at `past_days=92` the first 576 hours came back empty. Because a gap stops
+ * the reduction below, asking for more history silently yields *fewer* days,
+ * and can yield none at all.
+ *
+ * Accuracy does not argue for more either. Measured against the CEMS
+ * reanalysis at 61 European grid points, mean absolute error flattens once
+ * spin-up passes ~45 days: 5.22 at 30 d, 4.83 at 60 d, 4.75 at 90 d.
+ */
 const FWI_SPINUP_DAYS = 60
 
 /**

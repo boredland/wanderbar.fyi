@@ -119,6 +119,17 @@ describe('reduceToNoonInputs', () => {
     expect(rows.map((r) => new Date(r.t).toISOString().slice(0, 10))).toEqual(['2026-06-02'])
   })
 
+  it('yields nothing when the series opens with a long run of gaps', () => {
+    // Open-Meteo does this past roughly past_days=60: it starts the series with
+    // hundreds of empty hours rather than refusing. Emitting partial days from
+    // the tail would hand the codes a series with no spin-up, so nothing is
+    // returned and the caller keeps the previous reading.
+    const h = hourly('2026-06-01', 96, (i) =>
+      i < 72 ? { temperature_2m: null, relative_humidity_2m: null, wind_speed_10m: null } : {}
+    )
+    expect(reduceToNoonInputs(h, 0)).toEqual([])
+  })
+
   it('returns nothing for an empty series', () => {
     expect(reduceToNoonInputs({}, 0)).toEqual([])
   })
