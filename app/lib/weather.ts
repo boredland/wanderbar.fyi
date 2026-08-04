@@ -146,16 +146,19 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
 /**
  * Days of history fed to the fire-weather codes before the forecast starts.
  *
- * 60 is a ceiling, not just a preference. Open-Meteo's forecast endpoint backs
- * `past_days` with a reanalysis that trails the present, and past roughly 60 it
- * starts the series with a long run of nulls instead of refusing the request:
- * at `past_days=92` the first 576 hours came back empty. Because a gap stops
- * the reduction below, asking for more history silently yields *fewer* days,
- * and can yield none at all.
+ * This is close to a hard ceiling. `past_days` is capped at 93, and the
+ * reanalysis behind it trails the present by weeks, so the series is padded
+ * with leading nulls rather than refused: real data began on the same date
+ * (2026-05-28, ~68 days back) whether 70, 85 or 93 was requested. Since a gap
+ * stops the reduction below, asking for more silently returns *fewer* usable
+ * days. 60 leaves a few days of headroom against that moving boundary.
  *
- * Accuracy does not argue for more either. Measured against the CEMS
- * reanalysis at 61 European grid points, mean absolute error flattens once
- * spin-up passes ~45 days: 5.22 at 30 d, 4.83 at 60 d, 4.75 at 90 d.
+ * More history would barely help anyway. Against the CEMS reanalysis, mean
+ * absolute error is 5.93 at 60 d, 5.73 at 90 d and 5.69 from 120 d onwards,
+ * with the danger class unchanged throughout: winter rain resets the Drought
+ * Code annually, so history older than the last wet season carries no
+ * information. Reaching even 120 d would need the archive endpoint stitched on
+ * as a second request, to buy 0.24 FWI and no change in what the user sees.
  */
 const FWI_SPINUP_DAYS = 60
 
