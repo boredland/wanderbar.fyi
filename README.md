@@ -66,16 +66,24 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
   is exactly right on 34 of 61 points. (Re-running the same comparison on ERA5
   archive data scores better, 4.8 and 36 of 61, but the app does not use that
   endpoint, so the shipped number is the one quoted here.)
-- **The remaining fire-danger error is the floor, not a bug.** That residual
-  correlates with nothing the code controls: 0.03 against Drought Code, 0.13
-  against latitude. It correlates -0.25 with the reference value itself, which
-  is compression toward the middle, the signature of a different input model
-  rather than a mis-run code. Longer spin-up does not move it (flat past ~45
-  days) and interpolating to exact solar noon makes it worse (4.7 to 6.0),
-  since averaging two hours flattens the diurnal peak the system wants. CEMS
-  runs ERA5 on its own grid; we run a keyless model blend. Individual points
-  can be far off, 38.5N 27E reads 61.9 against 82.8, which is the honest reason
-  the number is presented as an indication and never as a fire ban.
+- **The remaining fire-danger error is the floor, not a bug.** Comparing each
+  code against the CEMS equivalents locates it. FFMC, which carries no history
+  and is computed from a single day's weather, agrees to 3%; ISI is 2.3 off.
+  So the daily inputs are sound. The long-memory codes drift instead: DMC 44%,
+  DC 31% low, because 60 days of spin-up cannot accumulate a season of drought.
+  Seeding the Drought Code higher nonetheless makes the result *worse*, from
+  5.8 to 5.9 and four danger classes lost, because FWI is dominated by ISI at
+  these levels: a 30% move in ISI shifts FWI 22 to 34, the same move in BUI
+  only 24 to 32. Our low DC and high DMC currently cancel into a Buildup Index
+  two points off CEMS, and correcting one alone breaks the cancellation.
+  A fitted bias correction fails too. `cems ~ a + b * ours` gives b around
+  0.85, so the compression is real, but the slope wanders between 0.81 and 0.93
+  from day to day. Cross-validated over four days and 121 points, it improves
+  the held-out day by 0.19 FWI, which is not significant (t = 1.50), and it
+  makes the danger class *worse*, 276 correct of 484 against 271. What is left
+  is CEMS running ERA5 on its own grid against our keyless model blend.
+  Individual points can be far off, 38.5N 27E reads 61.9 against 82.8, which is
+  the honest reason the number is presented as an indication, never a fire ban.
 - **The pace constants are moving time only.** DIN 33466 and the SAC scale both
   exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
   picks, never a tweak to the published numbers.
