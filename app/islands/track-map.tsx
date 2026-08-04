@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'hono/jsx'
 import { conditionIconHtml } from '../lib/condition-icon'
-import { conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
+import { conditionLabel, isDayHour, sourceLabel, wmoIcon } from '../lib/icons'
 import type { Forecast } from '../lib/store'
 import type { Waypoint } from '../lib/track'
 import type { Warning } from '../lib/warnings'
@@ -110,7 +110,13 @@ export default function TrackMap(props: Props) {
           `<strong>${time}</strong> · km ${(wp.cumDistM / 1000).toFixed(1)}`,
           hour?.tempC !== null && hour !== null ? `${hour.tempC.toFixed(0)} °C` : null,
           hour?.gustKmh !== null && hour !== null ? `gusts ${Math.round(hour.gustKmh)} km/h` : null,
-          ...ws.map((w) => `${conditionLabel[w.condition]} (${w.detail})`)
+          // Same rule as the timeline: name the source only when it is not the
+          // usual one, so the popup does not repeat "Open-Meteo" on every pin.
+          ...ws.map(
+            (w) =>
+              `${conditionLabel[w.condition]} (${w.detail})` +
+              (w.source === 'open-meteo' ? '' : ` — ${sourceLabel[w.source]}`)
+          )
         ].filter(Boolean)
 
         // keyboard:false does not stop Leaflet giving every marker tabindex=0,

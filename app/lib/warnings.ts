@@ -13,11 +13,19 @@ export type Condition =
   | 'darkness'
   | 'fire'
 
+/**
+ * Who said so. Not decoration: a thunderstorm can be raised by Open-Meteo's
+ * weather code, by MET's thunder probability, or by both, and fire danger is
+ * computed here rather than fetched from anyone. The rest is Open-Meteo.
+ */
+export type Source = 'open-meteo' | 'met' | 'open-meteo+met' | 'computed'
+
 export type Warning = {
   seq: number
   condition: Condition
   forecastHour: number
   detail: string
+  source: Source
 }
 
 export type Thresholds = {
@@ -89,7 +97,8 @@ export function evaluateWarnings(
             seq: wf.seq,
             condition: 'fire',
             forecastHour: etaMs,
-            detail: `${danger}, FWI ${value.toFixed(0)}`
+            detail: `${danger}, FWI ${value.toFixed(0)}`,
+            source: 'computed'
           })
         }
       }
@@ -99,7 +108,15 @@ export function evaluateWarnings(
     // times, so it is judged per waypoint rather than per forecast hour.
     if (thresholds.enabled.darkness) {
       const dark = darknessAt(wf.sun, etaMs)
-      if (dark) out.push({ seq: wf.seq, condition: 'darkness', forecastHour: etaMs, detail: dark })
+      if (dark) {
+        out.push({
+          seq: wf.seq,
+          condition: 'darkness',
+          forecastHour: etaMs,
+          detail: dark,
+          source: 'open-meteo'
+        })
+      }
     }
 
     // A warning's identity is (seq, condition), so several hours inside the
@@ -110,12 +127,12 @@ export function evaluateWarnings(
     for (const h of wf.hours) {
       const gap = Math.abs(h.t - etaMs)
       if (gap > ETA_WINDOW_MS) continue
-      const push = (condition: Condition, detail: string) => {
+      const push = (condition: Condition, detail: string, source: Source = 'open-meteo') => {
         if (!thresholds.enabled[condition]) return
         const prev = bestByCondition[condition]
         if (prev && prev.gap <= gap) return
         bestByCondition[condition] = {
-          w: { seq: wf.seq, condition, forecastHour: h.t, detail },
+          w: { seq: wf.seq, condition, forecastHour: h.t, detail, source },
           gap
         }
       }
@@ -134,11 +151,14 @@ export function evaluateWarnings(
       if (code !== null && HAIL_CODES[code]) push('hail', 'possible')
 
       const metThunder = metExtras[wf.seq]?.probabilityOfThunder
-      if (
-        (code !== null && THUNDER_CODES[code]) ||
-        (metThunder !== null && metThunder !== undefined && metThunder >= 30)
-      ) {
-        push('thunderstorm', instabilityDetail(h.capeJkg))
+      const omThunder = code !== null && THUNDER_CODES[code]
+      const saysThunder = metThunder !== null && metThunder !== undefined && metThunder >= 30
+      if (omThunder || saysThunder) {
+        push(
+          'thunderstorm',
+          instabilityDetail(h.capeJkg),
+          omThunder && saysThunder ? 'open-meteo+met' : saysThunder ? 'met' : 'open-meteo'
+        )
       }
       if (gust >= thresholds.windKmh) push('wind', `gusts ${Math.round(gust)} km/h`)
 

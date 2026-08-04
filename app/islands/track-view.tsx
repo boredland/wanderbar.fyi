@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
 import { ConditionIcon } from '../lib/condition-icon'
-import { conditionLabel, isDayHour, wmoIcon } from '../lib/icons'
+import { conditionLabel, isDayHour, sourceLabel, wmoIcon } from '../lib/icons'
 import { notifyDelta } from '../lib/notify'
 import { get, set, type Fix, type Forecast, type Track } from '../lib/store'
 import { syncNow } from '../lib/sync'
@@ -9,6 +9,17 @@ import type { Hour } from '../lib/weather'
 import type { Warning } from '../lib/warnings'
 import { estimatePosition, startAnchorMs } from '../lib/track'
 import TrackMap from './track-map'
+
+/**
+ * Where the heights came from. 740 m read out of your own GPX and 740 m taken
+ * from a global elevation model are not the same claim, and only one of them
+ * was measured anywhere near the trail.
+ */
+const ELE_SOURCE: Record<Track['eleSource'], string | null> = {
+  gpx: 'from your GPX',
+  dem: 'from elevation model',
+  none: null
+}
 
 const STALE_MS = 2 * 3600_000
 const OLD_FIX_MS = 6 * 3600_000
@@ -183,14 +194,17 @@ export default function TrackView() {
 
       <dl class="graticule flex flex-wrap gap-x-6 gap-y-2 pb-3">
         {[
-          ['Time', hoursToText(totalS)],
-          ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`],
-          ['Up', `${Math.round(track.ascentM)} m`],
-          ['Down', `${Math.round(track.descentM)} m`]
-        ].map(([label, value]) => (
+          ['Time', hoursToText(totalS), null],
+          ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`, null],
+          // Heights are a property of the whole track, so the source belongs
+          // here rather than repeated against all sixty waypoints.
+          ['Up', `${Math.round(track.ascentM)} m`, ELE_SOURCE[track.eleSource]],
+          ['Down', `${Math.round(track.descentM)} m`, ELE_SOURCE[track.eleSource]]
+        ].map(([label, value, note]) => (
           <div key={label}>
             <dt class="eyebrow">{label}</dt>
             <dd class="figures text-lg font-bold">{value}</dd>
+            {note ? <dd class="text-2xs text-muted">{note}</dd> : null}
           </div>
         ))}
       </dl>
@@ -545,14 +559,31 @@ function Timeline(props: {
                 </span>
               </div>
               {ws.length ? (
-                <div class="flex flex-wrap gap-x-3 gap-y-1">
+                <div class="flex flex-col gap-1">
                   {ws.map((w) => (
                     <span
                       key={w.condition}
-                      class="inline-flex items-center gap-1.5 text-sm font-semibold text-warn"
+                      class="inline-flex flex-wrap items-baseline gap-x-1.5 text-sm font-semibold text-warn"
                     >
-                      <ConditionIcon condition={w.condition} size={16} />
-                      {conditionLabel[w.condition]} ({w.detail})
+                      <ConditionIcon
+                        condition={w.condition}
+                        size={16}
+                        class="translate-y-0.5"
+                      />
+                      <span>
+                        {conditionLabel[w.condition]} ({w.detail})
+                      </span>
+                      {/*
+                       * Only when it is NOT the usual source. Open-Meteo raises
+                       * almost every warning, so printing it on each row repeats
+                       * one answer down the whole timeline and teaches nothing.
+                       * Naming the exceptions is what carries information: MET
+                       * saw a storm Open-Meteo did not, or the fire index was
+                       * computed here rather than forecast by anyone.
+                       */}
+                      {w.source === 'open-meteo' ? null : (
+                        <span class="font-normal text-muted">{sourceLabel[w.source]}</span>
+                      )}
                     </span>
                   ))}
                 </div>

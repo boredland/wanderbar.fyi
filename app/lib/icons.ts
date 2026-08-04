@@ -1,4 +1,4 @@
-import type { Condition } from './warnings'
+import type { Condition, Source } from './warnings'
 
 /** MET bases that ship _day/_night variants; the rest 404 with a suffix. */
 const DAY_VARIANT: Record<string, true> = {
@@ -141,4 +141,15 @@ const KNOWN_BASES: Record<string, true> = {
   snowandthunder: true,
   snowshowers: true,
   snowshowersandthunder: true
+}
+
+/**
+ * How a source is named in the UI. Short enough to sit inside a warning row
+ * without wrapping it, and spelled the way the provider spells itself.
+ */
+export const sourceLabel: Record<Source, string> = {
+  'open-meteo': 'Open-Meteo',
+  met: 'MET',
+  'open-meteo+met': 'Open-Meteo + MET',
+  computed: 'computed here'
 }

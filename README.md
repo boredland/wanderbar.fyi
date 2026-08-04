@@ -66,7 +66,7 @@ on every wake; that is lock-screen spam.
 |---|---|
 | `app/lib/track.ts` | Geometry, `PROFILES`, `paceTime`, snapping, dead reckoning |
 | `app/lib/gpx.ts` | GPX parsing (split out so the service worker stays small) |
-| `app/lib/warnings.ts` | Thresholds and the worsen/clear diff |
+| `app/lib/warnings.ts` | Thresholds, warning `source`, and the worsen/clear diff |
 | `app/lib/schedule.ts` | Whole-hour, DST-correct wake scheduling |
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
@@ -132,6 +132,30 @@ One indexable URL, so the SEO surface is small and stays that way:
 - The best-effort disclaimer stays a visible banner, never an FAQ row: a safety
   caveat must not be one click away. The FAQ deliberately has no "how much should
   I trust it" entry, because the banner already answers it in the open.
+
+### Showing which provider said what
+
+Every `Warning` carries a `source`. It is real information, not a credit line:
+a thunderstorm can be raised by Open-Meteo's weather code, by MET's thunder
+probability, or by both, and fire danger is computed on the device rather than
+forecast by anyone.
+
+Two rules keep it from becoming noise:
+
+- **The default is never printed.** Open-Meteo raises almost every warning, so
+  labelling each row with it repeats one answer down the whole timeline. Only
+  `met`, `open-meteo+met` and `computed` are shown, in the timeline and in map
+  popups. A warning with no label is an ordinary Open-Meteo reading.
+- **`diffWarnings` ignores `source`.** The key stays `(seq, condition)`. A storm
+  both providers saw, which later only MET still calls, is the same storm;
+  keying on source would buzz the lock screen every time the models drifted
+  apart, which is the noise the diff exists to prevent. There is a test for this.
+
+Notifications deliberately omit it: the body is capped at three warnings, and on
+a lock screen *where* and *when* beat *who said so*.
+
+Elevation source (`eleSource`) is shown once under Up/Down rather than against
+all sixty waypoints, because it is a property of the whole track.
 
 ### Manifest screenshots
 

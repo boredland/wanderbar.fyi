@@ -160,6 +160,27 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
       'Hourly temperature, precipitation, wind, gusts and weather codes come from Open-Meteo, fetched by your device for each waypoint; Open-Meteo blends several national models (ECMWF, GFS, ICON) rather than relying on one. Sunrise and sunset come from the same place. A few checkpoints are cross-checked against MET Norway (Yr), and when the two disagree on temperature or rain the timeline says so instead of quietly picking one. Elevation comes from your GPX file, or from Open-Meteo Copernicus elevation model if it has none; the two are never mixed within one track because that would invent ascent at the join.'
   },
   {
+    q: 'Which forecast said so?',
+    a: (
+      <>
+        <p>
+          Almost everything comes from Open-Meteo, so the timeline only names a
+          source when it is <em>not</em> that: &ldquo;MET&rdquo; when the Norwegian
+          model saw a storm Open-Meteo did not, &ldquo;Open-Meteo + MET&rdquo; when
+          both did, and &ldquo;computed here&rdquo; for fire danger, which no
+          provider forecasts.
+        </p>
+        <p>
+          A row with no source next to it is an ordinary Open-Meteo reading. The
+          heights under Up and Down say whether they came from your GPX file or
+          from an elevation model, because those are not the same claim.
+        </p>
+      </>
+    ),
+    text:
+      'Almost everything comes from Open-Meteo, so the timeline names a source only when it is not that: "MET" when the Norwegian model saw a storm Open-Meteo did not, "Open-Meteo + MET" when both did, and "computed here" for fire danger, which no provider forecasts. A warning with no source beside it is an ordinary Open-Meteo reading. The heights under Up and Down say whether they came from your GPX file or from an elevation model, because those are not the same claim.'
+  },
+  {
     q: 'How is fire danger worked out?',
     a: (
       <p>

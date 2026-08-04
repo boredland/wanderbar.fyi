@@ -312,12 +312,56 @@ describe('warning windows follow the start anchor', () => {
   })
 })
 
+describe('warning provenance', () => {
+  const sourceOf = (ws: Warning[], c: Condition) => ws.find((w) => w.condition === c)?.source
+
+  it('credits Open-Meteo when only its weather code says thunder', () => {
+    expect(sourceOf(evaluate(hour({ code: 95 })), 'thunderstorm')).toBe('open-meteo')
+  })
+
+  it('credits MET when only its thunder probability says so', () => {
+    // Open-Meteo's code 1 is a clear sky: without MET there is no warning here,
+    // so attributing this one to Open-Meteo would be a lie the user could act on.
+    const ws = evaluate(hour({ code: 1 }), DEFAULT_THRESHOLDS, {
+      0: { probabilityOfThunder: 60 }
+    })
+    expect(sourceOf(ws, 'thunderstorm')).toBe('met')
+  })
+
+  it('credits both when both raise the same storm', () => {
+    const ws = evaluate(hour({ code: 95 }), DEFAULT_THRESHOLDS, {
+      0: { probabilityOfThunder: 60 }
+    })
+    expect(sourceOf(ws, 'thunderstorm')).toBe('open-meteo+met')
+  })
+
+  it('marks fire danger as computed, because no provider forecasts it', () => {
+    const day = new Date(NOW).toISOString().slice(0, 10)
+    const ws = evaluateWarnings(
+      DEFAULT_THRESHOLDS,
+      forecast(hour()),
+      [wp(0, 0)],
+      0,
+      NOW,
+      {},
+      { [day]: 40 }
+    )
+    expect(sourceOf(ws, 'fire')).toBe('computed')
+  })
+
+  it('credits Open-Meteo for the ordinary hourly variables', () => {
+    expect(sourceOf(evaluate(hour({ precipMm: 9 })), 'rain')).toBe('open-meteo')
+    expect(sourceOf(evaluate(hour({ gustKmh: 90 })), 'wind')).toBe('open-meteo')
+  })
+})
+
 describe('the warning baseline', () => {
   const w = (seq: number, condition: Condition): Warning => ({
     seq,
     condition,
     forecastHour: NOW,
-    detail: 'x'
+    detail: 'x',
+    source: 'open-meteo'
   })
 
   it('treats an empty previous set as all-new, so a reset re-announces', () => {
@@ -341,7 +385,8 @@ describe('diffWarnings', () => {
     seq,
     condition,
     forecastHour,
-    detail: 'x'
+    detail: 'x',
+    source: 'open-meteo'
   })
 
   it('reports nothing for identical sets', () => {
@@ -364,6 +409,16 @@ describe('diffWarnings', () => {
   it('stays silent when only forecastHour drifts', () => {
     const prev = [w(1, 'rain'), w(2, 'wind')]
     const next = [w(1, 'rain', NOW + 1_800_000), w(2, 'wind', NOW + 1_800_000)]
+    expect(diffWarnings(prev, next)).toEqual({ worsened: [], cleared: [] })
+  })
+
+  it('stays silent when only the source changes', () => {
+    // A thunderstorm both providers agree on, then only MET still calls it, is
+    // the same storm. Keying the diff on source would buzz the lock screen every
+    // time the two models drifted apart, which is exactly the noise the diff
+    // exists to prevent.
+    const prev: Warning[] = [{ ...w(3, 'thunderstorm'), source: 'open-meteo+met' }]
+    const next: Warning[] = [{ ...w(3, 'thunderstorm'), source: 'met' }]
     expect(diffWarnings(prev, next)).toEqual({ worsened: [], cleared: [] })
   })
 })
