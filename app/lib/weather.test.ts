@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { reduceToNoonInputs, solarNoonUtcHour, type OpenMeteoHourly } from './weather'
+import {
+  fwiInputsUrls,
+  reduceToNoonInputs,
+  solarNoonUtcHour,
+  stitchHourly,
+  type OpenMeteoHourly
+} from './weather'
 
 /**
  * Builds an hourly UTC series starting at `start`T00:00, with per-hour values
@@ -132,5 +138,78 @@ describe('reduceToNoonInputs', () => {
 
   it('returns nothing for an empty series', () => {
     expect(reduceToNoonInputs({}, 0)).toEqual([])
+  })
+})
+
+describe('fwiInputsUrls', () => {
+  const NOW = Date.parse('2026-08-04T09:00:00Z')
+
+  it('splits history between the archive and the forecast endpoint', () => {
+    const { archive, forecast } = fwiInputsUrls(37.98, 23.73, 5, NOW)
+    expect(archive.hostname).toBe('archive-api.open-meteo.com')
+    expect(forecast.hostname).toBe('api.open-meteo.com')
+  })
+
+  it('ends the archive window where the forecast window begins', () => {
+    const { archive, forecast } = fwiInputsUrls(37.98, 23.73, 5, NOW)
+    // 120 d of spin-up, handing over 3 d back: archive covers through 07-31,
+    // and past_days=3 reaches 08-01, leaving no hole between them.
+    expect(archive.searchParams.get('start_date')).toBe('2026-04-06')
+    expect(archive.searchParams.get('end_date')).toBe('2026-07-31')
+    expect(forecast.searchParams.get('past_days')).toBe('3')
+  })
+
+  it('clamps the forecast horizon to what the endpoint serves', () => {
+    expect(fwiInputsUrls(0, 0, 99, NOW).forecast.searchParams.get('forecast_days')).toBe('16')
+    expect(fwiInputsUrls(0, 0, 0, NOW).forecast.searchParams.get('forecast_days')).toBe('1')
+  })
+
+  it('asks both endpoints for the same variables in UTC', () => {
+    const { archive, forecast } = fwiInputsUrls(37.98, 23.73, 5, NOW)
+    expect(archive.searchParams.get('hourly')).toBe(forecast.searchParams.get('hourly'))
+    expect(archive.searchParams.get('timezone')).toBe('UTC')
+    expect(forecast.searchParams.get('timezone')).toBe('UTC')
+  })
+})
+
+describe('stitchHourly', () => {
+  const series = (start: string, hours: number, temp: number): OpenMeteoHourly => {
+    const time: string[] = []
+    const temperature_2m: (number | null)[] = []
+    const t0 = Date.parse(`${start}T00:00:00Z`)
+    for (let i = 0; i < hours; i++) {
+      time.push(new Date(t0 + i * 3600_000).toISOString().slice(0, 16))
+      temperature_2m.push(temp)
+    }
+    return { time, temperature_2m }
+  }
+
+  it('concatenates two disjoint series in order', () => {
+    const out = stitchHourly(series('2026-06-01', 24, 1), series('2026-06-02', 24, 2))
+    expect(out.time).toHaveLength(48)
+    expect(out.time[0]).toBe('2026-06-01T00:00')
+    expect(out.time[47]).toBe('2026-06-02T23:00')
+  })
+
+  it('prefers the archive across an overlap', () => {
+    // past_days counts back from the current hour, so the forecast leg normally
+    // reaches behind the handoff date. The better source must win there.
+    const out = stitchHourly(series('2026-06-01', 48, 1), series('2026-06-02', 48, 2))
+    const times = out.time as string[]
+    expect(times).toHaveLength(72)
+    const noon2 = times.indexOf('2026-06-02T12:00')
+    expect(out.temperature_2m?.[noon2]).toBe(1)
+    expect(out.temperature_2m?.[times.length - 1]).toBe(2)
+  })
+
+  it('leaves no duplicate timestamps', () => {
+    const out = stitchHourly(series('2026-06-01', 48, 1), series('2026-06-02', 48, 2))
+    expect(new Set(out.time as string[]).size).toBe((out.time as string[]).length)
+  })
+
+  it('falls back to whichever series has data', () => {
+    const only = series('2026-06-01', 24, 1)
+    expect(stitchHourly({}, only)).toBe(only)
+    expect(stitchHourly(only, {})).toBe(only)
   })
 })

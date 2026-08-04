@@ -1,13 +1,21 @@
 import { createRoute } from 'honox/factory'
-import { fwiInputsUrl, reduceToNoonInputs, type OpenMeteoHourly } from '../../lib/weather'
+import {
+  FWI_MIN_SPINUP_DAYS,
+  fwiInputsUrls,
+  reduceToNoonInputs,
+  stitchHourly,
+  type OpenMeteoHourly
+} from '../../lib/weather'
 
 /**
- * Fire-weather inputs: 60 days of hourly history reduced to one row per day,
+ * Fire-weather inputs: months of hourly history reduced to one row per day,
  * sampled at local solar noon as the FWI System requires.
  *
- * Reducing here rather than on the client turns a ~60 kB hourly series into
- * ~4 kB, and the codes only advance once a day, so the result is cached hard
- * and shared by everyone on the same grid cell.
+ * Two upstream series are joined here, ERA5 archive for the spin-up and the
+ * forecast blend for recent and future days, which is the other reason this is
+ * a route: it keeps a two-request fan-out and a ~150 kB reduction off the
+ * client, leaving ~7 kB. The codes only advance once a day, so the result is
+ * cached hard and shared by everyone on the same grid cell.
  */
 
 /**
@@ -43,11 +51,23 @@ export const GET = createRoute(async (c) => {
   const hit = await cache.match(key)
   if (hit) return hit
 
-  const upstream = await fetch(fwiInputsUrl(gridLat, gridLon, days))
-  if (!upstream.ok) return c.json({ error: 'fwi_unavailable' }, 502)
-  const json = (await upstream.json()) as { hourly?: OpenMeteoHourly }
+  const { archive, forecast } = fwiInputsUrls(gridLat, gridLon, days)
+  const [aRes, fRes] = await Promise.all([fetch(archive), fetch(forecast)])
+  if (!fRes.ok) return c.json({ error: 'fwi_unavailable' }, 502)
+  const fJson = (await fRes.json()) as { hourly?: OpenMeteoHourly }
+  const aJson = aRes.ok ? ((await aRes.json()) as { hourly?: OpenMeteoHourly }) : null
 
-  const res = Response.json(reduceToNoonInputs(json.hourly ?? {}, gridLon), {
+  const hourly = aJson?.hourly
+    ? stitchHourly(aJson.hourly, fJson.hourly ?? {})
+    : (fJson.hourly ?? {})
+  const rows = reduceToNoonInputs(hourly, gridLon)
+
+  // Without the archive leg only a few days of history survive, and a run that
+  // short under-calls the danger class about half the time. Better to report
+  // nothing and let the client keep its previous reading.
+  if (rows.length < FWI_MIN_SPINUP_DAYS) return c.json({ error: 'fwi_unavailable' }, 502)
+
+  const res = Response.json(rows, {
     headers: { 'cache-control': `public, max-age=${CACHE_SECONDS}` }
   })
   c.executionCtx.waitUntil(cache.put(key, res.clone()))

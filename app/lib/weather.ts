@@ -144,23 +144,47 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
 }
 
 /**
- * Days of history fed to the fire-weather codes before the forecast starts.
+ * Days of history the fire-weather codes spin up over.
  *
- * This is close to a hard ceiling. `past_days` is capped at 93, and the
- * reanalysis behind it trails the present by weeks, so the series is padded
- * with leading nulls rather than refused: real data began on the same date
- * (2026-05-28, ~68 days back) whether 70, 85 or 93 was requested. Since a gap
- * stops the reduction below, asking for more silently returns *fewer* usable
- * days. 60 leaves a few days of headroom against that moving boundary.
- *
- * More history would barely help anyway. Against the CEMS reanalysis, mean
- * absolute error is 5.93 at 60 d, 5.73 at 90 d and 5.69 from 120 d onwards,
- * with the danger class unchanged throughout: winter rain resets the Drought
+ * The codes are recursive, so the run needs a runway before the forecast starts.
+ * 120 days is where accuracy stops improving: winter rain resets the Drought
  * Code annually, so history older than the last wet season carries no
- * information. Reaching even 120 d would need the archive endpoint stitched on
- * as a second request, to buy 0.24 FWI and no change in what the user sees.
+ * information, and 240 or 668 days score identically.
+ *
+ * This exceeds what the forecast endpoint can supply. `past_days` is capped at
+ * 93 there, and its reanalysis trails by weeks, so it pads with leading nulls
+ * instead of refusing: real data began on the same date whether 70, 85 or 93
+ * was asked for, about 68 days back. The archive endpoint covers the rest.
  */
-const FWI_SPINUP_DAYS = 60
+const FWI_SPINUP_DAYS = 120
+
+/**
+ * Days at the end of the spin-up taken from the forecast endpoint rather than
+ * the archive.
+ *
+ * The archive is ERA5, which is what CEMS itself runs on and measurably better
+ * input than the forecast blend, but it carries no forecast. So the archive
+ * supplies the long history and the forecast endpoint takes over shortly before
+ * the present and continues into the future.
+ *
+ * Three days is the measured optimum. Handing over sooner (1 day) loses
+ * significance, later (7 days) admits more of the weaker source: against CEMS
+ * over 19 days and 121 points, mean absolute error was 5.43 at 1 day, 5.26 at
+ * 3, and 5.33 at 7, versus 5.57 for the forecast endpoint alone.
+ */
+const FWI_HANDOFF_DAYS = 3
+
+/**
+ * Fewest days of spin-up that may be reported at all.
+ *
+ * A short run has not accumulated the Drought Code yet, and it fails in the
+ * dangerous direction: against CEMS it under-called the danger class on 49.9%
+ * of samples at 9 days of spin-up and 41.4% at 14, against 19% at the full 120,
+ * a seventh of those by two classes or more. Since the archive leg supplies the
+ * depth, losing it must suppress the reading rather than quietly downgrade it.
+ * By 30 days the shortfall is close to gone, which is where this sits.
+ */
+export const FWI_MIN_SPINUP_DAYS = 30
 
 /**
  * The UTC hour closest to 12:00 local solar time at this longitude.
@@ -173,16 +197,73 @@ export function solarNoonUtcHour(lon: number): number {
   return ((Math.round(12 - lon / 15) % 24) + 24) % 24
 }
 
-/** The upstream hourly series behind {@link reduceToNoonInputs}. */
-export function fwiInputsUrl(lat: number, lon: number, forecastDays: number): URL {
-  const url = new URL('https://api.open-meteo.com/v1/forecast')
-  url.searchParams.set('latitude', lat.toFixed(4))
-  url.searchParams.set('longitude', lon.toFixed(4))
-  url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation')
-  url.searchParams.set('past_days', String(FWI_SPINUP_DAYS))
-  url.searchParams.set('forecast_days', String(Math.min(16, Math.max(1, forecastDays))))
-  url.searchParams.set('timezone', 'UTC')
-  return url
+/** ISO date `offset` days from `from`, in UTC. */
+function isoDay(from: number, offset: number): string {
+  return new Date(from + offset * 86400_000).toISOString().slice(0, 10)
+}
+
+/**
+ * The two upstream series that {@link stitchHourly} joins: ERA5 archive for the
+ * bulk of the spin-up, forecast blend for the last few days plus the future.
+ */
+export function fwiInputsUrls(
+  lat: number,
+  lon: number,
+  forecastDays: number,
+  now = Date.now()
+): { archive: URL; forecast: URL } {
+  const coords = (url: URL) => {
+    url.searchParams.set('latitude', lat.toFixed(4))
+    url.searchParams.set('longitude', lon.toFixed(4))
+    url.searchParams.set(
+      'hourly',
+      'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation'
+    )
+    url.searchParams.set('timezone', 'UTC')
+    return url
+  }
+
+  const archive = coords(new URL('https://archive-api.open-meteo.com/v1/archive'))
+  archive.searchParams.set('start_date', isoDay(now, -FWI_SPINUP_DAYS))
+  // The join is exclusive of this date; the forecast endpoint covers it onward.
+  archive.searchParams.set('end_date', isoDay(now, -FWI_HANDOFF_DAYS - 1))
+
+  const forecast = coords(new URL('https://api.open-meteo.com/v1/forecast'))
+  forecast.searchParams.set('past_days', String(FWI_HANDOFF_DAYS))
+  forecast.searchParams.set('forecast_days', String(Math.min(16, Math.max(1, forecastDays))))
+
+  return { archive, forecast }
+}
+
+/**
+ * Concatenates the archive series with the forecast series, dropping any
+ * forecast hours the archive already covers.
+ *
+ * Overlap is the norm rather than the exception: `past_days` counts back from
+ * the current hour, so the forecast window usually reaches a little further
+ * back than the handoff date. Preferring the archive across the overlap keeps
+ * the better source wherever both have data, and keeps the seam at one point.
+ */
+export function stitchHourly(
+  archive: OpenMeteoHourly,
+  forecast: OpenMeteoHourly
+): OpenMeteoHourly {
+  const aTimes = (archive.time ?? []) as string[]
+  const fTimes = (forecast.time ?? []) as string[]
+  if (aTimes.length === 0) return forecast
+  if (fTimes.length === 0) return archive
+
+  const last = aTimes[aTimes.length - 1]
+  let from = 0
+  while (from < fTimes.length && fTimes[from] <= last) from++
+
+  const out: OpenMeteoHourly = {}
+  for (const key of Object.keys(archive)) {
+    const head = archive[key] as (number | null)[]
+    const tail = (forecast[key] ?? []) as (number | null)[]
+    out[key] = [...head, ...tail.slice(from)] as OpenMeteoHourly[string]
+  }
+  return out
 }
 
 /**

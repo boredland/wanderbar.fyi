@@ -12,10 +12,12 @@ warning. It does exactly three things:
 
 - `GET /api/met`: a stateless proxy whose entire reason to exist is the
   `User-Agent` header MET Norway's ToS requires and browsers cannot set.
-- `GET /api/fwi`: reduces 60 days of hourly history to one fire-weather input
-  row per day. It exists to move bytes, not secrets: the hourly series is
-  ~60 kB and the reduction ~4 kB. Coordinates are snapped to a 0.25 deg grid
-  and the result is cached for a day, so everyone on a cell shares one entry.
+- `GET /api/fwi`: joins two Open-Meteo series, ERA5 archive for four months of
+  spin-up and the forecast blend for recent and future days, then reduces them
+  to one fire-weather input row per day. It exists to move bytes, not secrets:
+  the hourly series total ~150 kB against ~9 kB reduced. Coordinates are snapped
+  to a 0.25 deg grid and the result is cached for a day, so everyone on a cell
+  shares one entry.
 - `PUT|GET|DELETE /api/wake`: stores **one** push subscription plus **one**
   whole-hour schedule in a single Durable Object, and sends an empty wake-up
   push on that schedule.
@@ -60,12 +62,31 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
   the running moisture codes. Rain is the exception: it is the 24 h total
   *ending* at noon. This mirrors how the Copernicus CEMS/GEFF reanalysis derives
   its own inputs per grid cell (Vitolo et al. 2020, Sci Data 7:216).
-  Checked against that reanalysis at 61 European grid points for 2026-07-30,
-  sampling at noon beat daily aggregates on every measure. On the inputs the
-  app actually ships, mean absolute error is **5.8 FWI** and the danger class
-  is exactly right on 34 of 61 points. (Re-running the same comparison on ERA5
-  archive data scores better, 4.8 and 36 of 61, but the app does not use that
-  endpoint, so the shipped number is the one quoted here.)
+  Checked against that reanalysis, sampling at noon beat daily aggregates on
+  every measure.
+- **Fire-weather history comes from ERA5, the forecast from the model blend.**
+  The archive endpoint is the same reanalysis CEMS runs on and is the better
+  input, but it has no forecast; the forecast endpoint has one but caps history
+  at 93 days and pads the excess with nulls. So the archive supplies the
+  spin-up and the blend takes over three days before the present. Measured over
+  19 days and 121 European points, that is **5.26 FWI mean absolute error and
+  61.6% of danger classes exactly right, against 5.57 and 59.4%** for the blend
+  alone, significant on both (t = 5.35, McNemar p < 0.01). Handing over at one
+  day loses significance and at seven admits too much of the weaker source.
+  Spin-up is 120 days because winter rain resets the Drought Code annually, so
+  240 and 668 score identically.
+- **Danger classes round up near an edge.** Our FWI scatters a few points
+  against the reference, so a value just below a boundary is as likely to belong
+  above it, and up is the safe way to be wrong about fire. A 0.25 margin
+  recovers under-calls essentially free (61.6% correct with 379 under-calls
+  becomes 61.8% with 352) and beats the blend on both axes at once. The effect
+  is flat between 0.1 and 0.4, and holds on days it was not chosen on, so it is
+  not tuned to one week.
+- **A short spin-up is suppressed, not downgraded.** If the archive leg fails
+  only a few days of history survive, and a run that short under-called the
+  danger class on half of samples, a seventh of them by two classes or more. The
+  route returns 502 below 30 usable days so the client keeps its last reading
+  instead of showing a quietly reassuring one.
 - **The remaining fire-danger error is the floor, not a bug.** Comparing each
   code against the CEMS equivalents locates it. FFMC, which carries no history
   and is computed from a single day's weather, agrees to 3%; ISI is 2.3 off.

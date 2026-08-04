@@ -158,12 +158,34 @@ describe('runFwi', () => {
 describe('fireDanger bands', () => {
   it('maps the official class boundaries, upper bound excluded', () => {
     expect(fireDanger(0)).toBe('very low')
-    expect(fireDanger(5.19)).toBe('very low')
+    expect(fireDanger(4)).toBe('very low')
     expect(fireDanger(5.2)).toBe('low')
     expect(fireDanger(11.2)).toBe('moderate')
     expect(fireDanger(21.3)).toBe('high')
     expect(fireDanger(38)).toBe('very high')
     expect(fireDanger(50)).toBe('extreme')
     expect(fireDanger(120)).toBe('extreme')
+  })
+
+  it('reports the higher class just below an edge', () => {
+    // Our FWI scatters by a few points against the reference, so a value this
+    // close to an edge is as likely to belong above it; up is the safe way to
+    // be wrong about fire.
+    expect(fireDanger(5.19)).toBe('low')
+    expect(fireDanger(11.0)).toBe('moderate')
+    expect(fireDanger(37.9)).toBe('very high')
+    expect(fireDanger(49.8)).toBe('extreme')
+  })
+
+  it('does not round up from further below an edge', () => {
+    expect(fireDanger(4.9)).toBe('very low')
+    expect(fireDanger(10.9)).toBe('low')
+    expect(fireDanger(37.7)).toBe('high')
+  })
+
+  it('never reports past the top class', () => {
+    // The margin must not index past the last band.
+    expect(fireDanger(49.9)).toBe('extreme')
+    expect(fireDanger(1e6)).toBe('extreme')
   })
 })
