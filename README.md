@@ -123,6 +123,15 @@ One indexable URL, so the SEO surface is small and stays that way:
   constants; `wanderbar.fyi` is load-bearing, not cosmetic (see wrangler.jsonc).
 - The homepage carries `WebApplication` JSON-LD. `offers` is required for a free
   listing to validate.
+- The footer FAQ carries `FAQPage` JSON-LD. This earns **no** Google rich result
+  (restricted to government and health sources since Aug 2023); it is there for
+  the assistants that do quote it, because the FAQ answers are where the honest
+  caveats live and those are the sentences that must survive summarisation. Each
+  entry keeps a plain-prose `text` beside its JSX `a`, so the version a machine
+  quotes is one a human wrote. Update both or neither.
+- The best-effort disclaimer stays a visible banner, never an FAQ row: a safety
+  caveat must not be one click away. The FAQ deliberately has no "how much should
+  I trust it" entry, because the banner already answers it in the open.
 
 ### Manifest screenshots
 
