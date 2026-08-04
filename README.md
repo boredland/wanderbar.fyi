@@ -8,10 +8,14 @@ notifies only when conditions **worsen or clear**.
 ## How it is put together
 
 **All weather logic is client-side.** The server never computes a forecast or a
-warning. It does exactly two things:
+warning. It does exactly three things:
 
 - `GET /api/met`: a stateless proxy whose entire reason to exist is the
   `User-Agent` header MET Norway's ToS requires and browsers cannot set.
+- `GET /api/fwi`: reduces 60 days of hourly history to one fire-weather input
+  row per day. It exists to move bytes, not secrets: the hourly series is
+  ~60 kB and the reduction ~4 kB. Coordinates are snapped to a 0.25 deg grid
+  and the result is cached for a day, so everyone on a cell shares one entry.
 - `PUT|GET|DELETE /api/wake`: stores **one** push subscription plus **one**
   whole-hour schedule in a single Durable Object, and sends an empty wake-up
   push on that schedule.
@@ -41,11 +45,22 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
 - **Elevation is single-source per track** (`eleSource`): all-GPX, or all-DEM.
   Mixing them fabricates ascent at every boundary.
 - **Fire danger is computed, not fetched.** No public API serves a free
-  point-query Fire Weather Index (OpenWeatherMap's needs a paid key; EFFIS/GWIS
-  layers are WMS tiles with a broken WFS backend; CWFIS is Canada-only). So the
-  Canadian FWI System is implemented client-side in `app/lib/fwi.ts` from
-  Open-Meteo's `past_days` history, which needs no key. It is an **indication**,
-  never a substitute for an official fire ban.
+  point-query Fire Weather Index. OpenWeatherMap's needs a paid key; EFFIS/GWIS
+  layers are WMS tiles with a broken WFS backend and `GetMap` returns colourised
+  PNG, not values; CWFIS is Canada-only. Copernicus CDS *does* publish the
+  authoritative CEMS product, but it is an authenticated async job queue that
+  returns whole-globe NetCDF/GRIB per request, and the reanalysis runs days
+  behind, which is unusable for a live per-point forecast. So the Canadian FWI
+  System is implemented client-side in `app/lib/fwi.ts` from Open-Meteo history,
+  which needs no key. It is an **indication**, never a substitute for an
+  official fire ban.
+- **FWI inputs are sampled at local solar noon, not daily aggregates.** The
+  system is calibrated on noon-LST observations, and `Tmax`/`RHmean`/`Wmax` each
+  sit on a different point of the diurnal curve, so the error compounds through
+  the running moisture codes and moved the danger class on roughly a third of
+  days in spot checks. Rain is the exception: it is the 24 h total *ending* at
+  noon. This mirrors how the Copernicus CEMS/GEFF reanalysis derives its own
+  inputs per grid cell (Vitolo et al. 2020, Sci Data 7:216).
 - **The pace constants are moving time only.** DIN 33466 and the SAC scale both
   exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
   picks, never a tweak to the published numbers.
@@ -69,6 +84,7 @@ on every wake; that is lock-screen spam.
 | `app/lib/warnings.ts` | Thresholds, warning `source`, and the worsen/clear diff |
 | `app/lib/schedule.ts` | Whole-hour, DST-correct wake scheduling |
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
+| `app/routes/api/fwi.ts` | Cached noon-sampled fire-weather inputs |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
 | `app/style.css` | Design tokens, `.profile` gutter, shared control surfaces |
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |

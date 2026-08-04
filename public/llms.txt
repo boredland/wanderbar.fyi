@@ -29,8 +29,10 @@ one schedule, nothing else.
   message, never expanded into a track.
 - Fire danger is computed on the device (Canadian Fire Weather Index, Van Wagner
   & Pickett 1985) from 60 days of Open-Meteo history, because no public service
-  offers a free point-query FWI. It is an indication and never a substitute for
-  an official fire ban.
+  offers a free point-query FWI. Inputs are sampled at local solar noon, as the
+  system is calibrated on noon-LST observations, with rain as the 24 h total
+  ending at noon. It is an indication and never a substitute for an official
+  fire ban.
 - Positioning is 2D. GPS altitude is the wrong datum, so it is stored for
   diagnostics and read by nothing.
 - Elevation is single-source per track, all-GPX or all-DEM, because mixing them

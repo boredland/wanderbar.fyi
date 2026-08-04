@@ -39,7 +39,7 @@ const HOURLY_VARS = [
   'freezing_level_height'
 ].join(',')
 
-type OpenMeteoHourly = Record<string, (number | null)[] | string[]>
+export type OpenMeteoHourly = Record<string, (number | null)[] | string[]>
 type OpenMeteoResponse = { hourly?: OpenMeteoHourly; daily?: Record<string, string[]> }
 
 const at = (arr: unknown, i: number): number | null => {
@@ -147,43 +147,91 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
 const FWI_SPINUP_DAYS = 60
 
 /**
- * Daily inputs for the fire-weather system: 60 days of history plus the
- * forecast, in one keyless call. Open-Meteo's `past_days` covers the history,
- * so no archive endpoint and no API key is needed.
+ * The UTC hour closest to 12:00 local solar time at this longitude.
+ *
+ * Solar time, not the civil timezone: the FWI System's noon is astronomical,
+ * and civil zones are wide and politically skewed enough that using one would
+ * sample a visibly different point on the diurnal curve.
+ */
+export function solarNoonUtcHour(lon: number): number {
+  return ((Math.round(12 - lon / 15) % 24) + 24) % 24
+}
+
+/** The upstream hourly series behind {@link reduceToNoonInputs}. */
+export function fwiInputsUrl(lat: number, lon: number, forecastDays: number): URL {
+  const url = new URL('https://api.open-meteo.com/v1/forecast')
+  url.searchParams.set('latitude', lat.toFixed(4))
+  url.searchParams.set('longitude', lon.toFixed(4))
+  url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation')
+  url.searchParams.set('past_days', String(FWI_SPINUP_DAYS))
+  url.searchParams.set('forecast_days', String(Math.min(16, Math.max(1, forecastDays))))
+  url.searchParams.set('timezone', 'UTC')
+  return url
+}
+
+/**
+ * Reduces an hourly UTC series to one FWI input row per day, sampled at local
+ * solar noon.
+ *
+ * The system is calibrated on observations taken at noon local standard time,
+ * which is why this samples the hourly series instead of reducing it to daily
+ * aggregates: Tmax, RHmean and Wmax each sit on a different point of the
+ * diurnal curve than noon does, and the discrepancy compounds through the
+ * running moisture codes. This is also how the Copernicus CEMS/GEFF reanalysis
+ * derives its inputs per grid cell (Vitolo et al. 2020, Sci Data 7:216).
+ *
+ * Rain is the exception: the system wants the 24 h total *ending* at noon, so
+ * it is accumulated over the preceding day rather than sampled.
+ */
+export function reduceToNoonInputs(hourly: OpenMeteoHourly, lon: number): FwiInput[] {
+  const times = (hourly.time ?? []) as string[]
+  const noonHour = solarNoonUtcHour(lon)
+
+  const out: FwiInput[] = []
+  for (let i = 0; i < times.length; i++) {
+    if (Number(times[i].slice(11, 13)) !== noonHour) continue
+
+    const tempC = at(hourly.temperature_2m, i)
+    const rh = at(hourly.relative_humidity_2m, i)
+    const windKmh = at(hourly.wind_speed_10m, i)
+    if (tempC === null || rh === null || windKmh === null) break
+
+    // Open-Meteo stamps precipitation with the end of the hour it fell in, so
+    // the 24 h window ending at noon is the 24 samples through this one.
+    let precipMm: number | null = i >= 23 ? 0 : null
+    for (let k = i - 23; precipMm !== null && k <= i; k++) {
+      const mm = at(hourly.precipitation, k)
+      precipMm = mm === null ? null : precipMm + mm
+    }
+    // A truncated leading window would understate rain, so that day is skipped
+    // rather than emitted; a later gap would corrupt the running codes instead.
+    if (precipMm === null) {
+      if (out.length > 0) break
+      continue
+    }
+
+    out.push({ t: Date.parse(`${times[i].slice(0, 10)}T00:00:00Z`), tempC, rh, windKmh, precipMm })
+  }
+  return out
+}
+
+/**
+ * Daily inputs for the fire-weather system, via the Worker proxy.
+ *
+ * The proxy exists to shrink the transfer, not to add a key: the hourly series
+ * this is derived from is ~60 kB, the reduction ~4 kB, and the result is shared
+ * by every hiker on the same grid cell for the rest of the day.
  */
 export async function fetchFwiInputs(
   lat: number,
   lon: number,
   forecastDays: number
 ): Promise<FwiInput[]> {
-  const url = new URL('https://api.open-meteo.com/v1/forecast')
-  url.searchParams.set('latitude', lat.toFixed(4))
-  url.searchParams.set('longitude', lon.toFixed(4))
-  url.searchParams.set(
-    'daily',
-    'temperature_2m_max,relative_humidity_2m_mean,wind_speed_10m_max,precipitation_sum'
+  const res = await fetch(
+    `/api/fwi?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&days=${forecastDays}`
   )
-  url.searchParams.set('past_days', String(FWI_SPINUP_DAYS))
-  url.searchParams.set('forecast_days', String(Math.min(16, Math.max(1, forecastDays))))
-  url.searchParams.set('timezone', 'UTC')
-
-  const res = await fetch(url)
   if (!res.ok) throw new Error(`fwi inputs ${res.status}`)
-  const json = (await res.json()) as { daily?: Record<string, (number | null)[] | string[]> }
-  const d = json.daily ?? {}
-  const times = (d.time ?? []) as string[]
-
-  const out: FwiInput[] = []
-  for (let i = 0; i < times.length; i++) {
-    const tempC = at(d.temperature_2m_max, i)
-    const rh = at(d.relative_humidity_2m_mean, i)
-    const windKmh = at(d.wind_speed_10m_max, i)
-    const precipMm = at(d.precipitation_sum, i)
-    // A gap would silently corrupt the running codes, so stop at the first one.
-    if (tempC === null || rh === null || windKmh === null || precipMm === null) break
-    out.push({ t: Date.parse(`${times[i]}T00:00:00Z`), tempC, rh, windKmh, precipMm })
-  }
-  return out
+  return (await res.json()) as FwiInput[]
 }
 
 /** Copernicus DEM, orthometric like GPX <ele>. Max 100 coordinates per call. */
