@@ -57,10 +57,14 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
 - **FWI inputs are sampled at local solar noon, not daily aggregates.** The
   system is calibrated on noon-LST observations, and `Tmax`/`RHmean`/`Wmax` each
   sit on a different point of the diurnal curve, so the error compounds through
-  the running moisture codes and moved the danger class on roughly a third of
-  days in spot checks. Rain is the exception: it is the 24 h total *ending* at
-  noon. This mirrors how the Copernicus CEMS/GEFF reanalysis derives its own
-  inputs per grid cell (Vitolo et al. 2020, Sci Data 7:216).
+  the running moisture codes. Rain is the exception: it is the 24 h total
+  *ending* at noon. This mirrors how the Copernicus CEMS/GEFF reanalysis derives
+  its own inputs per grid cell (Vitolo et al. 2020, Sci Data 7:216).
+  Checked against that reanalysis at 61 European grid points for 2026-07-30,
+  sampling at noon cut mean absolute error from 7.2 to 4.6 FWI and got the
+  danger class exactly right on 36 of 61 points instead of 29. Individual points
+  can still be far off (Athens was 22 low), which is the honest reason the
+  reading is labelled an indication.
 - **The pace constants are moving time only.** DIN 33466 and the SAC scale both
   exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
   picks, never a tweak to the published numbers.
