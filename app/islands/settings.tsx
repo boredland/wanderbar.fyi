@@ -15,8 +15,13 @@ const CONDITIONS: Condition[] = [
   'blizzard',
   'thunderstorm',
   'darkness',
-  'fire'
+  'fire',
+  'ice',
+  'coldwind',
+  'deepsnow'
 ]
+
+type NumKey = 'heatC' | 'windKmh' | 'rainMm' | 'windChillC' | 'snowDepthM'
 
 export default function Settings() {
   const [t, setT] = useState<Thresholds>(DEFAULT_THRESHOLDS)
@@ -39,14 +44,21 @@ export default function Settings() {
     dispatchEvent(new Event('wanderbar:changed'))
   }, [])
 
-  const num = (key: 'heatC' | 'windKmh' | 'rainMm', label: string, min: number, max: number, step: number) => {
-    const off = key === 'heatC' && !t.enabled.heat
+  const OWNER: Partial<Record<NumKey, Condition>> = {
+    heatC: 'heat',
+    windChillC: 'coldwind',
+    snowDepthM: 'deepsnow'
+  }
+
+  const num = (key: NumKey, label: string, min: number, max: number, step: number) => {
+    const owner = OWNER[key]
+    const off = owner !== undefined && !t.enabled[owner]
     return (
     <label class="flex items-center justify-between gap-4">
       <span class="text-sm">
         {label}
         {off ? (
-          <span class="block text-xs text-muted">Enable Extreme heat to set this</span>
+          <span class="block text-xs text-muted">Enable {conditionLabel[owner!]} to set this</span>
         ) : null}
       </span>
       <input
@@ -98,6 +110,8 @@ export default function Settings() {
         </select>
       </label>
       {num('heatC', 'Heat above (°C)', 20, 45, 0.5)}
+      {num('windChillC', 'Wind chill below (°C)', -60, 5, 1)}
+      {num('snowDepthM', 'Lying snow above (m)', 0.1, 3, 0.1)}
       {num('windKmh', 'Gusts above (km/h)', 20, 120, 5)}
       {num('rainMm', 'Rain above (mm/h)', 0.5, 20, 0.5)}
     </div>

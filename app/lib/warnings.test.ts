@@ -3,6 +3,7 @@ import {
   DEFAULT_THRESHOLDS,
   diffWarnings,
   evaluateWarnings,
+  windChillC,
   type Condition,
   type Thresholds,
   type Warning
@@ -30,6 +31,7 @@ const hour = (over: Partial<Hour> = {}): Hour => ({
   precipMm: 0,
   precipProb: 0,
   snowfallCm: 0,
+  snowDepthM: 0,
   windKmh: 5,
   gustKmh: 5,
   code: 1,
@@ -115,7 +117,10 @@ describe('warning detail copy', () => {
     'blizzard',
     'thunderstorm',
     'darkness',
-    'fire'
+    'fire',
+    'ice',
+    'coldwind',
+    'deepsnow'
   ]
 
   it('never repeats the condition label inside the detail', () => {
@@ -420,5 +425,94 @@ describe('diffWarnings', () => {
     const prev: Warning[] = [{ ...w(3, 'thunderstorm'), source: 'open-meteo+met' }]
     const next: Warning[] = [{ ...w(3, 'thunderstorm'), source: 'met' }]
     expect(diffWarnings(prev, next)).toEqual({ worsened: [], cleared: [] })
+  })
+})
+
+describe('winter hiking', () => {
+  describe('windChillC', () => {
+    // Environment Canada's own worked example: -20 C with 30 km/h reads -33.
+    it('matches the published JAG/TI value', () => {
+      expect(windChillC(-20, 30)!).toBeCloseTo(-32.6, 1)
+      expect(windChillC(0, 30)!).toBeCloseTo(-6.5, 1)
+    })
+
+    it('refuses to extrapolate outside the model range', () => {
+      // Above 10 C there is no chill, and at or below 4.8 km/h the air is calm.
+      expect(windChillC(11, 30)).toBeNull()
+      expect(windChillC(-20, 4.8)).toBeNull()
+      expect(windChillC(-20, null)).toBeNull()
+      expect(windChillC(null, 30)).toBeNull()
+    })
+
+    it('gets colder as wind rises at fixed temperature', () => {
+      expect(windChillC(-10, 40)!).toBeLessThan(windChillC(-10, 10)!)
+    })
+  })
+
+  it('warns on freezing rain, which is neither rain nor snow', () => {
+    // The whole point: codes 56/57/66/67 sit in no other code table, so before
+    // 'ice' existed a glazed trail produced an empty timeline row.
+    for (const code of [56, 57, 66, 67]) {
+      expect(conditions(evaluate(hour({ code }))), `code ${code}`).toContain('ice')
+    }
+    expect(conditions(evaluate(hour({ code: 61 })))).not.toContain('ice')
+  })
+
+  it('names which kind of freezing precipitation it is', () => {
+    const detail = (code: number) =>
+      evaluate(hour({ code })).find((w) => w.condition === 'ice')!.detail
+    expect(detail(56)).toBe('freezing drizzle')
+    expect(detail(67)).toBe('heavy freezing rain')
+  })
+
+  it('applies the wind chill threshold at the boundary', () => {
+    // -13.6 C with 25 km/h chills to about -22.6.
+    const h = hour({ tempC: -13.6, windKmh: 25 })
+    expect(conditions(evaluate(h, thresholds({ windChillC: -20 })))).toContain('coldwind')
+    expect(conditions(evaluate(h, thresholds({ windChillC: -30 })))).not.toContain('coldwind')
+  })
+
+  it('does not raise wind chill on a calm cold day', () => {
+    // Calm air is outside the model, and a still -20 C is a normal winter day.
+    expect(conditions(evaluate(hour({ tempC: -20, windKmh: 0 })))).not.toContain('coldwind')
+  })
+
+  it('names the frostbite time only once it is short enough to matter', () => {
+    const detail = (tempC: number, windKmh: number) =>
+      evaluate(hour({ tempC, windKmh }), thresholds({ windChillC: -5 })).find(
+        (w) => w.condition === 'coldwind'
+      )!.detail
+    expect(detail(-30, 40)).toContain('frostbite 5-10 min')
+    expect(detail(-10, 20)).not.toContain('frostbite')
+  })
+
+  it('warns on lying snow, independently of whether it is falling', () => {
+    // Deep snow is a hazard on a bluebird day: the sky says nothing about it.
+    const deep = hour({ snowDepthM: 0.8, snowfallCm: 0, code: 0 })
+    const got = conditions(evaluate(deep))
+    expect(got).toContain('deepsnow')
+    expect(got).not.toContain('snow')
+  })
+
+  it('applies the lying snow threshold at the boundary', () => {
+    expect(conditions(evaluate(hour({ snowDepthM: 0.3 })))).toContain('deepsnow')
+    expect(conditions(evaluate(hour({ snowDepthM: 0.29 })))).not.toContain('deepsnow')
+  })
+
+  it('reports lying snow in centimetres, which is how it is spoken about', () => {
+    const w = evaluate(hour({ snowDepthM: 0.85 })).find((x) => x.condition === 'deepsnow')!
+    expect(w.detail).toBe('85 cm lying')
+  })
+
+  it('leaves every winter condition individually switchable', () => {
+    for (const c of ['ice', 'coldwind', 'deepsnow'] as Condition[]) {
+      const t = thresholds({ enabled: { ...DEFAULT_THRESHOLDS.enabled, [c]: false } })
+      const h = hour({ code: 66, tempC: -25, windKmh: 40, snowDepthM: 1.2 })
+      expect(conditions(evaluate(h, t)), c).not.toContain(c)
+    }
+  })
+
+  it('treats a missing snow depth as unknown rather than zero', () => {
+    expect(conditions(evaluate(hour({ snowDepthM: null })))).not.toContain('deepsnow')
   })
 })

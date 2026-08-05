@@ -95,7 +95,10 @@ export const conditionLabel: Record<Condition, string> = {
   blizzard: 'Blizzard',
   thunderstorm: 'Thunderstorm',
   darkness: 'Darkness',
-  fire: 'Fire risk'
+  fire: 'Fire risk',
+  ice: 'Ice',
+  coldwind: 'Wind chill',
+  deepsnow: 'Deep snow'
 }
 
 /** The 41 base names present in public/wx (83 files incl. day/night variants). */

@@ -12,6 +12,9 @@ export type Condition =
   | 'thunderstorm'
   | 'darkness'
   | 'fire'
+  | 'ice'
+  | 'coldwind'
+  | 'deepsnow'
 
 /**
  * Who said so. Not decoration: a thunderstorm can be raised by Open-Meteo's
@@ -35,6 +38,10 @@ export type Thresholds = {
   rainMm: number
   /** Minimum official danger class that warrants a warning. */
   fireDanger: FireDanger
+  /** Wind chill at or below this warrants a warning. */
+  windChillC: number
+  /** Lying snow at or above this warrants a warning, metres. */
+  snowDepthM: number
 }
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
@@ -47,12 +54,28 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
     blizzard: true,
     thunderstorm: true,
     darkness: true,
-    fire: true
+    fire: true,
+    ice: true,
+    coldwind: true,
+    deepsnow: true
   },
   heatC: 30,
   windKmh: 50,
   rainMm: 2,
-  fireDanger: 'high'
+  fireDanger: 'high',
+  /*
+   * Environment Canada calls -28 the onset of frostbite in 10-30 min, but the
+   * band above it is already "risk of hypothermia without adequate clothing",
+   * which is the decision a hiker actually makes the night before. -15 is
+   * inside that band and well clear of an ordinary cold-but-fine winter day.
+   */
+  windChillC: -15,
+  /*
+   * 30 cm of lying snow is roughly where an unbroken track stops being a walk:
+   * SAC/DAV put trail breaking at 200-250 m/h of ascent against 300 on a made
+   * track, i.e. a fifth to a third off the day.
+   */
+  snowDepthM: 0.3
 }
 
 const RAIN_CODES: Record<number, true> = { 61: true, 63: true, 65: true, 80: true, 81: true, 82: true }
@@ -60,6 +83,18 @@ const SNOW_CODES: Record<number, true> = { 71: true, 73: true, 75: true, 77: tru
 const THUNDER_CODES: Record<number, true> = { 95: true, 96: true, 99: true }
 /** Hail is derived from weather_code: Open-Meteo's `hail` variable is all nulls. */
 const HAIL_CODES: Record<number, true> = { 96: true, 99: true }
+/**
+ * Freezing drizzle and freezing rain. These fall as liquid and glaze on
+ * contact, so they land in neither RAIN_CODES nor SNOW_CODES and would
+ * otherwise pass in silence: 56/57 are the drizzle pair, 66/67 the rain pair.
+ * It is the one winter hazard that looks like nothing from indoors.
+ */
+const ICE_CODES: Record<number, string> = {
+  56: 'freezing drizzle',
+  57: 'dense freezing drizzle',
+  66: 'freezing rain',
+  67: 'heavy freezing rain'
+}
 
 /** A warning is about weather where and when the hiker will actually be. */
 const ETA_WINDOW_MS = 3600_000
@@ -168,6 +203,23 @@ export function evaluateWarnings(
         push('blizzard', `gusts ${Math.round(gust)} km/h at ${temp.toFixed(0)} °C`)
       }
 
+      if (code !== null && ICE_CODES[code]) push('ice', ICE_CODES[code])
+
+      // Wind chill is computed rather than taken from apparent_temperature:
+      // that variable also carries humidity and radiation, and measured against
+      // JAG/TI on a cold alpine day it sat ~4 °C low in light wind, which is
+      // the wrong direction to be wrong about frostbite.
+      const chill = windChillC(temp, h.windKmh)
+      if (chill !== null && chill <= thresholds.windChillC) {
+        push('coldwind', `feels like ${chill.toFixed(0)} °C${frostbiteDetail(chill)}`)
+      }
+
+      // Lying snow, not falling snow: the hazard is the walking, not the sky.
+      const lying = h.snowDepthM
+      if (lying !== null && lying >= thresholds.snowDepthM) {
+        push('deepsnow', `${Math.round(lying * 100)} cm lying`)
+      }
+
       const hot = Math.max(temp ?? -Infinity, feels ?? -Infinity)
       if (Number.isFinite(hot) && hot >= thresholds.heatC) push('heat', `${hot.toFixed(1)} °C`)
     }
@@ -177,6 +229,34 @@ export function evaluateWarnings(
     }
   }
   return out
+}
+
+/**
+ * Wind chill on the JAG/TI 2001 model, the index both the US NWS and
+ * Environment Canada publish, in °C from wind at the standard 10 m height.
+ *
+ * Returns null outside the model's stated validity range rather than
+ * extrapolating: above 10 °C there is no chill to report, and at or below
+ * 4.8 km/h the air is calm enough that the index collapses to the temperature.
+ */
+export function windChillC(tempC: number | null, windKmh: number | null): number | null {
+  if (tempC === null || windKmh === null) return null
+  if (tempC > 10 || windKmh <= 4.8) return null
+  const v = windKmh ** 0.16
+  return 13.12 + 0.6215 * tempC - 11.37 * v + 0.3965 * tempC * v
+}
+
+/**
+ * Environment Canada's frostbite banding. Only named once the exposure time is
+ * short enough to change what a hiker does; above that the number speaks for
+ * itself and a phrase would just pad the row.
+ */
+function frostbiteDetail(chillC: number): string {
+  if (chillC <= -55) return ', frostbite under 2 min'
+  if (chillC <= -48) return ', frostbite 2-5 min'
+  if (chillC <= -40) return ', frostbite 5-10 min'
+  if (chillC <= -28) return ', frostbite 10-30 min'
+  return ''
 }
 
 /** Civil twilight is roughly 30 min either side of the sun crossing. */

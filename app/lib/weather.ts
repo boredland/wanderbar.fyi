@@ -8,6 +8,8 @@ export type Hour = {
   precipMm: number | null
   precipProb: number | null
   snowfallCm: number | null
+  /** Snow lying on the ground, metres. Falling snow is `snowfallCm`. */
+  snowDepthM: number | null
   windKmh: number | null
   gustKmh: number | null
   code: number | null
@@ -86,6 +88,7 @@ export async function fetchOpenMeteo(
       precipMm: at(hourly.precipitation, j),
       precipProb: at(hourly.precipitation_probability, j),
       snowfallCm: at(hourly.snowfall, j),
+      snowDepthM: at(hourly.snow_depth, j),
       windKmh: at(hourly.wind_speed_10m, j),
       gustKmh: at(hourly.wind_gusts_10m, j),
       code: at(hourly.weather_code, j),
@@ -134,6 +137,7 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
       precipMm: nextH?.details?.precipitation_amount ?? null,
       precipProb: nextH?.details?.probability_of_precipitation ?? null,
       snowfallCm: null,
+      snowDepthM: null,
       windKmh: typeof wind === 'number' ? wind * 3.6 : null,
       gustKmh: typeof gust === 'number' ? gust * 3.6 : null,
       code: null,

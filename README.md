@@ -108,6 +108,24 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
 - **The pace constants are moving time only.** DIN 33466 and the SAC scale both
   exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
   picks, never a tweak to the published numbers.
+- **Wind chill is computed, never taken from `apparent_temperature`.** That
+  variable folds in humidity and radiation, so it is not the published index:
+  measured against JAG/TI on a cold alpine day it sat about 4 °C low in light
+  wind, which is the wrong direction to be wrong about frostbite. `windChillC`
+  implements the JAG/TI 2001 model the US NWS and Environment Canada both
+  publish, and returns null outside its stated range (above 10 °C, or at or
+  below 4.8 km/h) rather than extrapolating: in calm air the index collapses to
+  the temperature, and a still -20 °C is an ordinary winter day, not a warning.
+- **Freezing rain is its own condition.** WMO codes 56, 57, 66 and 67 fall as
+  liquid and glaze on contact, so they sit in neither `RAIN_CODES` nor
+  `SNOW_CODES` and raised *nothing at all* before `ice` existed. It is the one
+  winter hazard that looks like clear weather from indoors.
+- **Lying snow is a separate warning from falling snow.** `snow` reads
+  `snowfall`, `deepsnow` reads `snow_depth`; deep snow is a hazard on a bluebird
+  day and the sky says nothing about it. The 30 cm default is roughly where an
+  unbroken track stops being a walk: SAC/DAV put trail breaking at 200–300 m/h
+  of ascent against 400 on a made track. No pace constant can know whether
+  someone else went first, so the warning says what the profile cannot.
 - **Schedules are whole hours only.** No minute field exists in `Schedule`.
 
 ### The push is a wake-up, not a warning
@@ -125,7 +143,7 @@ on every wake; that is lock-screen spam.
 |---|---|
 | `app/lib/track.ts` | Geometry, `PROFILES`, `paceTime`, snapping, dead reckoning |
 | `app/lib/gpx.ts` | GPX parsing (split out so the service worker stays small) |
-| `app/lib/warnings.ts` | Thresholds, warning `source`, and the worsen/clear diff |
+| `app/lib/warnings.ts` | Thresholds, warning `source`, wind chill, and the worsen/clear diff |
 | `app/lib/schedule.ts` | Whole-hour, DST-correct wake scheduling |
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/routes/api/fwi.ts` | Cached noon-sampled fire-weather inputs |
@@ -236,7 +254,7 @@ npm install
 npm run dev      # Vite on :5173
 npm run build
 npx wrangler dev # the real Worker + Durable Object on :8787
-npm test         # 47 unit tests over the pure logic
+npm test         # 134 unit tests over the pure logic
 ```
 
 `VAPID_PRIVATE_KEY` (the JWK `d` scalar, **not** pkcs8) goes in `.dev.vars`

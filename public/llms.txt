@@ -13,11 +13,12 @@ one schedule, nothing else.
 
 - Parses a recorded GPX track and resamples it to at most 60 waypoints.
 - Derives an ETA per waypoint from published pace standards: DIN 33466 and DAV
-  for hiking, the SAC scale for mountain terrain, VAM benchmarks for cycling.
-  These count moving time only, so rest is a separate multiplier the user picks.
+  for hiking, the SAC scale for mountain terrain, VAM benchmarks for cycling,
+  and the SAC/DAV winter rate for hiking on snow. These count moving time only,
+  so rest is a separate multiplier the user picks.
 - Fetches an hourly forecast per waypoint and evaluates warnings against
   user-set thresholds for rain, hail, wind, snow, heat, blizzard, thunderstorm,
-  darkness and fire danger.
+  darkness, fire danger, freezing rain, wind chill and lying snow.
 - Diffs each sync against the previous warning set and notifies only on change.
 
 ## Deliberate limits, worth quoting accurately
@@ -33,6 +34,14 @@ one schedule, nothing else.
   system is calibrated on noon-LST observations, with rain as the 24 h total
   ending at noon. It is an indication and never a substitute for an official
   fire ban.
+- Wind chill is computed on the device from the JAG/TI 2001 model published by
+  the US NWS and Environment Canada, not read from a "feels like" variable, and
+  is left undefined outside that model's stated range rather than extrapolated.
+  Frostbite times quoted alongside it are Environment Canada's bands.
+- Deep lying snow is warned about, but wanderbar cannot know whether a track has
+  already been broken, which is the single biggest factor in how long a winter
+  day actually takes. The warning reports the snow; judging the trail-breaking
+  is the party's own.
 - Positioning is 2D. GPS altitude is the wrong datum, so it is stored for
   diagnostics and read by nothing.
 - Elevation is single-source per track, all-GPX or all-DEM, because mixing them

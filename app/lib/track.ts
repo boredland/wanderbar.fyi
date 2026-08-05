@@ -8,7 +8,7 @@ export type Waypoint = {
   cumAscentM: number
   etaOffsetS: number
 }
-export type ProfileId = 'hiking' | 'mountain' | 'running' | 'cycling' | 'ski'
+export type ProfileId = 'hiking' | 'mountain' | 'winter' | 'running' | 'cycling' | 'ski'
 
 /** Mountain hiking suits the alpine terrain this is mostly used on. */
 export const DEFAULT_PROFILE: ProfileId = 'mountain'
@@ -19,6 +19,16 @@ export const PROFILES: Record<
 > = {
   hiking: { label: 'Hiking', kmh: 4, ascentMh: 300, descentMh: 500 },
   mountain: { label: 'Mountain hiking', kmh: 4, ascentMh: 400, descentMh: 800 },
+  /*
+   * Winter hiking on foot: snowshoes or spikes on a made track. SAC/DAV put a
+   * winter ascent at 300 m/h against 400 for the same ground in summer, and
+   * descent is nothing like a ski descent because you are still walking, so it
+   * takes the on-foot 400 m/h rather than the ski figure. Breaking an unbroken
+   * track costs another fifth to a third of the day on top; that is what the
+   * deep-snow warning is for, since no pace constant can know whether someone
+   * else went first.
+   */
+  winter: { label: 'Winter hiking', kmh: 3, ascentMh: 300, descentMh: 400 },
   running: { label: 'Trail running', kmh: 11, ascentMh: 750, descentMh: 1000 },
   cycling: { label: 'Cycling', kmh: 20, ascentMh: 700, descentMh: null },
   ski: { label: 'Ski touring', kmh: 4, ascentMh: 300, descentMh: 1200 }

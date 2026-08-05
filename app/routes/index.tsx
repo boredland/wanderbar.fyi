@@ -121,8 +121,9 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
         <p>
           Your track is sampled into waypoints roughly every 2 km, and each one gets an
           arrival time from published pace standards: DIN 33466 and DAV for hiking, the SAC
-          scale for mountain terrain, VAM benchmarks for cycling. Those count moving time
-          only, so breaks are a separate setting rather than a fudged pace.
+          scale for mountain terrain, VAM benchmarks for cycling, and the SAC and DAV
+          winter rate for hiking on snow. Those count moving time only, so breaks are a
+          separate setting rather than a fudged pace.
         </p>
         <p>
           Times assume you start when you say and keep that pace. Tap &ldquo;Update my
@@ -132,7 +133,7 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
       </>
     ),
     text:
-      'Your track is sampled into waypoints roughly every 2 km, and each gets an arrival time from published pace standards: DIN 33466 and DAV for hiking, the SAC scale for mountain terrain, VAM benchmarks for cycling. Those count moving time only, so breaks are a separate setting. Times assume you start when you say and keep that pace; updating your position re-anchors the rest of the timeline to where you actually are.'
+      'Your track is sampled into waypoints roughly every 2 km, and each gets an arrival time from published pace standards: DIN 33466 and DAV for hiking, the SAC scale for mountain terrain, VAM benchmarks for cycling, and the SAC and DAV winter rate for hiking on snow. Those count moving time only, so breaks are a separate setting. Times assume you start when you say and keep that pace; updating your position re-anchors the rest of the timeline to where you actually are.'
   },
   {
     q: 'Where does the weather come from?',
@@ -167,8 +168,8 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
           Almost everything comes from Open-Meteo, so the timeline only names a
           source when it is <em>not</em> that: &ldquo;MET&rdquo; when the Norwegian
           model saw a storm Open-Meteo did not, &ldquo;Open-Meteo + MET&rdquo; when
-          both did, and &ldquo;computed here&rdquo; for fire danger, which no
-          provider forecasts.
+          both did, and &ldquo;computed here&rdquo; for fire danger and wind
+          chill, which no provider forecasts.
         </p>
         <p>
           A row with no source next to it is an ordinary Open-Meteo reading. The
@@ -178,7 +179,7 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
       </>
     ),
     text:
-      'Almost everything comes from Open-Meteo, so the timeline names a source only when it is not that: "MET" when the Norwegian model saw a storm Open-Meteo did not, "Open-Meteo + MET" when both did, and "computed here" for fire danger, which no provider forecasts. A warning with no source beside it is an ordinary Open-Meteo reading. The heights under Up and Down say whether they came from your GPX file or from an elevation model, because those are not the same claim.'
+      'Almost everything comes from Open-Meteo, so the timeline names a source only when it is not that: "MET" when the Norwegian model saw a storm Open-Meteo did not, "Open-Meteo + MET" when both did, and "computed here" for fire danger and wind chill, which no provider forecasts. A warning with no source beside it is an ordinary Open-Meteo reading. The heights under Up and Down say whether they came from your GPX file or from an elevation model, because those are not the same claim.'
   },
   {
     q: 'How is fire danger worked out?',
@@ -193,6 +194,31 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
     ),
     text:
       'It is calculated on your device rather than fetched, because no public service offers a free point forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of Open-Meteo weather history, which gives it drought memory rather than judging today alone. Treat it as an indication and always follow the local fire ban.'
+  },
+  {
+    q: 'Does it handle winter hiking?',
+    a: (
+      <>
+        <p>
+          Yes. Pick the Winter hiking pace and you get three warnings the summer
+          ones miss: freezing rain, which falls as liquid and glazes on contact
+          so it counts as neither rain nor snow; wind chill, worked out on your
+          device from the model the US and Canadian weather services publish,
+          with the frostbite time named once it is short enough to matter; and
+          deep lying snow, which is a hazard on a clear day and which the sky
+          tells you nothing about.
+        </p>
+        <p>
+          What it cannot know is whether somebody has already broken the trail,
+          and in deep snow that matters more than any other single thing. Alpine
+          clubs reckon breaking a fresh track costs roughly a fifth to a third of
+          the day on top. wanderbar reports the snow; how long it will take you
+          through it is your call.
+        </p>
+      </>
+    ),
+    text:
+      'Yes. Pick the Winter hiking pace and you get three warnings the summer ones miss: freezing rain, which falls as liquid and glazes on contact so it counts as neither rain nor snow; wind chill, worked out on your device from the model the US and Canadian weather services publish, with the frostbite time named once it is short enough to matter; and deep lying snow, which is a hazard on a clear day and which the sky tells you nothing about. What it cannot know is whether somebody has already broken the trail, and in deep snow that matters more than any other single thing. Alpine clubs reckon breaking a fresh track costs roughly a fifth to a third of the day on top. wanderbar reports the snow; how long it will take you through it is your call.'
   },
   {
     q: 'What does it cost, and who made it?',
