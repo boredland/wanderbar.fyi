@@ -27,6 +27,12 @@ export default jsxRenderer(({ children }) => {
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="#eaede6" />
         <meta name="description" content={DESCRIPTION} />
+        {/*
+         * Both spellings, deliberately. Chromium deprecated the apple- prefix
+         * and warns when it stands alone, but iOS before 15.4 reads only that
+         * one and launches in a browser tab without it.
+         */}
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="wanderbar" />
 
