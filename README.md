@@ -189,6 +189,13 @@ on every wake; that is lock-screen spam.
 
 `public/sw.js` is built by `npm run build:sw` and gitignored. Never edit it.
 
+Anything `.tsx` under `app/islands/` **is** an island: honox matches
+`^/app/islands/.+?\.tsx$` and makes each one a client entry. A test file named
+`.tsx` there therefore ships to the browser — `avalanche-panel.test.tsx` put a
+258 kB chunk in `dist/static/` before it was renamed. Island tests are `.ts`,
+which is why `avalanche-panel.test.ts` calls the component as a function rather
+than rendering JSX.
+
 ## Design
 
 The page is built as a **topographic sheet**: warm grey-green paper
