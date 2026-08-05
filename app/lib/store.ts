@@ -1,3 +1,4 @@
+import type { Bulletin } from './avalanche'
 import { DEFAULT_SCHEDULE, type Schedule } from './schedule'
 import { DEFAULT_REST, type ProfileId, type RestId, type Waypoint } from './track'
 import { DEFAULT_THRESHOLDS, type Thresholds, type Warning } from './warnings'
@@ -46,6 +47,12 @@ export type Forecast = {
   /** Computed FWI per UTC date; see runFwi in ./fwi. */
   fwiByDate: Record<string, number>
   warnings: Warning[]
+  /**
+   * Official avalanche bulletin, deliberately outside `warnings`: it is
+   * regional rather than per-waypoint, and its absence never means safe.
+   * Null only for forecasts stored before the feature existed.
+   */
+  avalanche: Bulletin | null
 }
 
 export type Stored = {

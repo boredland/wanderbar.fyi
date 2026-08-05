@@ -221,6 +221,37 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
       'Yes. Pick the Winter hiking pace and you get three warnings the summer ones miss: freezing rain, which falls as liquid and glazes on contact so it counts as neither rain nor snow; wind chill, worked out on your device from the model the US and Canadian weather services publish, with the frostbite time named once it is short enough to matter; and deep lying snow, which is a hazard on a clear day and which the sky tells you nothing about. What it cannot know is whether somebody has already broken the trail, and in deep snow that matters more than any other single thing. Alpine clubs reckon breaking a fresh track costs roughly a fifth to a third of the day on top. wanderbar reports the snow; how long it will take you through it is your call.'
   },
   {
+    q: 'Does it warn about avalanches?',
+    a: (
+      <>
+        <p>
+          It shows the official bulletin where one exists &mdash; SLF in
+          Switzerland, avalanche.report for Tyrol and Trentino, Varsom in
+          Norway, Avalanche Canada &mdash; and links straight to it. What it
+          never does is work one out for itself. Avalanche danger comes from the
+          structure of the snowpack, weak layers buried weeks ago, and no
+          weather forecast can see them.
+        </p>
+        <p>
+          So when there is no bulletin, wanderbar says exactly that instead of
+          staying quiet: no service covers this route, or the season has ended,
+          or the bulletin has expired, or it could not be reached. None of those
+          mean the slope is safe. An expired bulletin loses its number
+          altogether, because yesterday&rsquo;s figure on today&rsquo;s snow is
+          the most confident way to be wrong.
+        </p>
+        <p>
+          Even with a live bulletin, the danger level is a pointer to the real
+          document, not a substitute for it. wanderbar does not know the angle
+          or the aspect of the slope you are about to stand on, which is most of
+          what decides whether it slides.
+        </p>
+      </>
+    ),
+    text:
+      'It shows the official bulletin where one exists (SLF in Switzerland, avalanche.report for Tyrol and Trentino, Varsom in Norway, Avalanche Canada) and links straight to it. It never works one out for itself: avalanche danger comes from the structure of the snowpack and weak layers buried weeks ago, which no weather forecast can see. When there is no bulletin, wanderbar says so explicitly rather than staying quiet: no service covers this route, or the season has ended, or the bulletin has expired, or it could not be reached. None of those mean the slope is safe. An expired bulletin loses its number altogether, because yesterday’s figure on today’s snow is the most confident way to be wrong. Even with a live bulletin the danger level is a pointer to the real document, not a substitute for it: wanderbar does not know the angle or aspect of the slope you are about to stand on, which is most of what decides whether it slides.'
+  },
+  {
     q: 'What does it cost, and who made it?',
     a: (
       <p>

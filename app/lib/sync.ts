@@ -1,3 +1,4 @@
+import { fetchBulletin } from './avalanche'
 import { runFwi } from './fwi'
 import { get, set } from './store'
 import { estimatePosition, startAnchorMs } from './track'
@@ -61,6 +62,12 @@ export async function syncNow(): Promise<Delta> {
       // No fire data this sync; every other warning still stands.
     }
 
+    // Official bulletin, never computed and never a `Warning`: it is regional,
+    // and unlike every weather condition its absence is not an all-clear. It
+    // must not gate the sync, but a failure here still has to reach the screen
+    // as an explicit "unknown", which is what fetchBulletin's states carry.
+    const avalanche = await fetchBulletin(remaining)
+
     const next = evaluateWarnings(
       thresholds,
       waypoints,
@@ -87,7 +94,8 @@ export async function syncNow(): Promise<Delta> {
       metSymbols,
       metThunder,
       fwiByDate,
-      warnings: next
+      warnings: next,
+      avalanche
     })
     await set('lastFetchError', null)
     return delta

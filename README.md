@@ -105,6 +105,37 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
   is CEMS running ERA5 on its own grid against our keyless model blend.
   Individual points can be far off, 38.5N 27E reads 61.9 against 82.8, which is
   the honest reason the number is presented as an indication, never a fire ban.
+- **Avalanche danger is fetched, never computed — the exact inverse of fire.**
+  Fire danger is computed here because no free API serves it and the FWI is a
+  defensible model of weather. Avalanche danger is the opposite on both counts:
+  real keyless APIs exist, and no forecast variable exposes what actually
+  governs it, namely the structure of the snowpack and the persistent weak
+  layers buried in it weeks ago. So `app/lib/avalanche.ts` only ever relays an
+  official bulletin and never derives one.
+- **The bulletin is not a `Warning`, and that is a safety decision.** Every
+  other condition is per-waypoint, per-hour, and its absence is meaningful: no
+  rain warning means the models say no rain. A bulletin is regional and daily,
+  and its absence means nothing at all — most of the world has no service, the
+  ones that exist run only in winter, and a fetch can fail. Folding it into
+  `warnings` would render those cases as the green *"No un-wanderbar weather
+  ahead"* verdict, i.e. an all-clear on a loaded slope. So it is its own field
+  on `Forecast` and its own panel, and `BulletinStatus` makes every non-answer
+  (`no-coverage`, `out-of-season`, `stale`, `error`) a state the UI must say out
+  loud. There are tests asserting no danger level survives any of them.
+- **An expired bulletin loses its number, not just its styling.** The
+  avalanche.report "latest" endpoint served a bulletin dated May when queried in
+  August, so this is observed behaviour, not a hypothetical. A greyed-out "3"
+  still reads as "3" at a cold trailhead, so `withFreshness` nulls the level,
+  bands and problems outright.
+- **It never claims a slope is safe.** wanderbar knows neither slope angle nor
+  aspect, which is most of what decides whether a given metre of ground slides,
+  so the panel always says so and always links to the issuing service. The
+  danger level is a pointer to the real bulletin, never a substitute for it.
+- **Avalanche is deliberately absent from the notify/diff path.**
+  `diffWarnings` keys on `(seq, condition)` and ignores detail, so a bulletin
+  escalating from 2 to 4 would produce no key change and no notification — worse
+  than silence, because it would look like the system had checked. Bulletin
+  changes are shown on the page instead.
 - **The pace constants are moving time only.** DIN 33466 and the SAC scale both
   exclude breaks, so rest is an explicit multiplier (`REST_FACTORS`) the user
   picks, never a tweak to the published numbers.
@@ -144,6 +175,8 @@ on every wake; that is lock-screen spam.
 | `app/lib/track.ts` | Geometry, `PROFILES`, `paceTime`, snapping, dead reckoning |
 | `app/lib/gpx.ts` | GPX parsing (split out so the service worker stays small) |
 | `app/lib/warnings.ts` | Thresholds, warning `source`, wind chill, and the worsen/clear diff |
+| `app/lib/avalanche.ts` | Official bulletins: providers, region matching, freshness |
+| `app/islands/avalanche-panel.tsx` | The bulletin panel and its four "unknown" states |
 | `app/lib/schedule.ts` | Whole-hour, DST-correct wake scheduling |
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/routes/api/fwi.ts` | Cached noon-sampled fire-weather inputs |
@@ -254,7 +287,7 @@ npm install
 npm run dev      # Vite on :5173
 npm run build
 npx wrangler dev # the real Worker + Durable Object on :8787
-npm test         # 134 unit tests over the pure logic
+npm test         # 156 unit tests over the pure logic
 ```
 
 `VAPID_PRIVATE_KEY` (the JWK `d` scalar, **not** pkcs8) goes in `.dev.vars`
@@ -283,6 +316,12 @@ locally and `npx wrangler secret put VAPID_PRIVATE_KEY` in production.
 Type: [Archivo](https://fonts.google.com/specimen/Archivo) and
 [Atkinson Hyperlegible Next](https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next),
 both SIL Open Font License 1.1.
+
+Avalanche bulletins by their issuing services, shown unaltered and always
+linked: [SLF](https://www.slf.ch/) (Switzerland),
+[avalanche.report](https://avalanche.report/) (Euregio),
+[Varsom/NVE](https://varsom.no/) (Norway) and
+[Avalanche Canada](https://avalanche.ca/).
 
 Weather data by [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0,
 non-commercial tier). Cross-check from the Norwegian Meteorological Institute /

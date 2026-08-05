@@ -195,6 +195,34 @@ body {
 }
 
 /*
+ * The avalanche bulletin.
+ *
+ * Given its own surface rather than a timeline row because it is somebody
+ * else's official document, not a wanderbar verdict, and because its "we do not
+ * know" states must never be mistaken for the clear verdict above it. The
+ * unknown state is deliberately not red: it is not a warning, it is an absence,
+ * and dressing it as danger would train people to dismiss it.
+ */
+.bulletin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-raised);
+}
+
+.bulletin-unknown {
+  border-style: dashed;
+}
+
+.bulletin-high {
+  border-color: var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 6%, var(--color-raised));
+}
+
+/*
  * Shared control surfaces. Defined once so hover, press, focus and disabled
  * states stay identical across every button and select, per Material's state
  * layer guidance, rather than being re-invented per island.

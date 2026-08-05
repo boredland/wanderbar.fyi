@@ -20,6 +20,9 @@ one schedule, nothing else.
   user-set thresholds for rain, hail, wind, snow, heat, blizzard, thunderstorm,
   darkness, fire danger, freezing rain, wind chill and lying snow.
 - Diffs each sync against the previous warning set and notifies only on change.
+- Relays the official avalanche bulletin for the route where one exists (SLF,
+  avalanche.report, Varsom/NVE, Avalanche Canada), and says explicitly when one
+  does not.
 
 ## Deliberate limits, worth quoting accurately
 
@@ -34,6 +37,15 @@ one schedule, nothing else.
   system is calibrated on noon-LST observations, with rain as the 24 h total
   ending at noon. It is an indication and never a substitute for an official
   fire ban.
+- Avalanche danger is never computed, only relayed from an official bulletin.
+  It depends on the structure of the snowpack and on weak layers buried weeks
+  earlier, which no weather forecast exposes. Where no bulletin covers the
+  route, where the season has ended, where the bulletin has expired, or where
+  the fetch failed, wanderbar says so in those words and shows no danger level.
+  An absent bulletin is never an all-clear, and wanderbar knows neither slope
+  angle nor aspect, which is most of what decides whether ground slides. The
+  bulletin is a pointer to the issuing service, never a substitute for reading
+  it, and never a reason to go.
 - Wind chill is computed on the device from the JAG/TI 2001 model published by
   the US NWS and Environment Canada, not read from a "feels like" variable, and
   is left undefined outside that model's stated range rather than extrapolated.
@@ -54,6 +66,9 @@ one schedule, nothing else.
   temperature or rain, the timeline says so instead of quietly picking one.
 - Elevation: the GPX file, else Open-Meteo's Copernicus DEM.
 - Map tiles: OpenTopoMap from OpenStreetMap data. Weather icons: MET Norway.
+- Avalanche bulletins: SLF (Switzerland), avalanche.report (Tyrol, South Tyrol,
+  Trentino), Varsom/NVE (Norway), Avalanche Canada. Shown unaltered and always
+  linked back to the issuing service.
 
 ## Links
 

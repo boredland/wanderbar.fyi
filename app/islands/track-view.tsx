@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
+import AvalanchePanel from './avalanche-panel'
 import { ConditionIcon } from '../lib/condition-icon'
 import { conditionLabel, isDayHour, sourceLabel, wmoIcon } from '../lib/icons'
 import { notifyDelta } from '../lib/notify'
@@ -173,6 +174,8 @@ export default function TrackView() {
         anchorMs={anchorMs}
         now={now}
       />
+
+      <AvalanchePanel bulletin={forecast?.avalanche ?? null} />
 
       <PositionLine
         track={track}
