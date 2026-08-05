@@ -240,11 +240,6 @@ export default function TrackView() {
 
       <CapabilityLine subscribed={subscribed} schedule={schedule} />
 
-      <p class="border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
-        Best-effort forecast from public models, so it can be wrong or out of date. Check
-        local information too where you can.
-      </p>
-
       <p class="text-xs text-muted">
         Weather data by{' '}
         <a class="underline" rel="noopener noreferrer" href="https://open-meteo.com/">

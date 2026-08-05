@@ -333,6 +333,22 @@ export default createRoute((c) => {
         <p class="eyebrow ml-auto">Weather along your route</p>
       </header>
 
+      {/*
+        * Above the forecast, not under it. This is the frame the whole page is
+        * read through, so it cannot sit past sixty waypoints and a map where
+        * the people most likely to act on a wrong number never reach it. It
+        * shares the .notice surface with the avalanche bulletin because both
+        * are wanderbar stating its own limits rather than reporting weather.
+        */}
+      <p class="notice notice-high text-sm">
+        <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The
+        data comes from public models and can be wrong, late or missing, and mountain
+        weather turns faster than any forecast follows. Always check local sources too
+        where you can: the local avalanche or weather service, the hut warden, the valley
+        station. Treat wanderbar as one input to your own judgement, never as a reason to
+        set out.
+      </p>
+
       <TrackView />
 
       <details class="panel">
@@ -373,15 +389,6 @@ export default createRoute((c) => {
       </details>
 
       <footer class="flex flex-col gap-3 border-t border-line pt-4 text-xs text-muted">
-        <p class="border-l-[3px] border-warn bg-raised px-3 py-2 text-sm">
-          <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The
-          data comes from public models and can be wrong, late or missing, and mountain
-          weather turns faster than any forecast follows. Always check local sources too
-          where you can: the local avalanche or weather service, the hut warden, the
-          valley station. Treat wanderbar as one input to your own judgement, never as a
-          reason to set out.
-        </p>
-
         <section class="flex flex-col gap-1" aria-labelledby="faq-heading">
           <h2 id="faq-heading" class="eyebrow pb-1">
             Questions

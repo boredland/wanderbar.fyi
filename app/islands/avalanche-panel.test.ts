@@ -79,7 +79,7 @@ describe('AvalanchePanel', () => {
   })
 
   it('raises the surface at considerable and above', () => {
-    expect(body({ ...base, level: 3 })).toContain('bulletin-high')
-    expect(body({ ...base, level: 2 })).toContain('bulletin-known')
+    expect(body({ ...base, level: 3 })).toContain('notice-high')
+    expect(body({ ...base, level: 2 })).not.toContain('notice-high')
   })
 })

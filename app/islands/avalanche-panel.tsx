@@ -27,7 +27,7 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
 
   if (b.status !== 'ok') {
     return (
-      <section class="bulletin bulletin-unknown">
+      <section class="notice notice-quiet">
         <p class="eyebrow">Avalanche</p>
         <p class="text-base font-semibold">{HEADLINE[b.status]}</p>
         <p class="text-sm text-muted">
@@ -40,7 +40,7 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
 
   const level = b.level as DangerLevel
   return (
-    <section class={`bulletin ${level >= 3 ? 'bulletin-high' : 'bulletin-known'}`}>
+    <section class={`notice ${level >= 3 ? 'notice-high' : ''}`}>
       <p class="eyebrow">Avalanche</p>
       <p class="display text-xl font-bold leading-tight">
         <span class="figures">{level}</span> &mdash; {DANGER_LABEL[level]}

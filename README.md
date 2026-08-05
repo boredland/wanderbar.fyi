@@ -181,7 +181,7 @@ on every wake; that is lock-screen spam.
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/routes/api/fwi.ts` | Cached noon-sampled fire-weather inputs |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
-| `app/style.css` | Design tokens, `.profile` gutter, shared control surfaces |
+| `app/style.css` | Design tokens, `.profile` gutter, `.notice`, shared control surfaces |
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |
 | `app/lib/sync.ts` | Fetch → evaluate → diff → persist |
 | `app/waker.ts` | The Durable Object: one subscription, one schedule |
@@ -207,6 +207,13 @@ lettering (`.eyebrow`) set in condensed Archivo.
   wherever it carries meaning, ink sits on top of it (5.63:1). The text accent is
   `--color-brand`, a deep alpine lake (6.5:1), and warnings are `--color-warn`
   oxide red (6.4:1). Every text/ground pair in the theme clears WCAG AA.
+- **`.notice` is one surface, used twice.** The best-effort banner and the
+  avalanche bulletin are both wanderbar stating its own limits rather than
+  reporting weather, so they share a card instead of being two lookalikes that
+  drift. `.notice-high` is the highlight, a warn-red edge over a 6% wash, for
+  the one that must be read first; `.notice-quiet` goes dashed, because an
+  absent bulletin is not a warning but an absence, and dressing it as danger
+  would train people to dismiss it.
 - **The timeline's left gutter is the track's own elevation profile.** The
   profile is turned on its side so progress runs *down* the gutter, matching the
   reading direction: each row's lower edge is the next row's upper edge, which is
@@ -249,7 +256,11 @@ One indexable URL, so the SEO surface is small and stays that way:
   quotes is one a human wrote. Update both or neither.
 - The best-effort disclaimer stays a visible banner, never an FAQ row: a safety
   caveat must not be one click away. The FAQ deliberately has no "how much should
-  I trust it" entry, because the banner already answers it in the open.
+  I trust it" entry, because the banner already answers it in the open. It sits
+  **above** the forecast and there is exactly **one** of it. It used to be
+  stated twice, in the footer and again inside the track, which is how a caveat
+  becomes furniture: the reader learns to skip it, and the copy drifts apart
+  until the two versions promise different things.
 
 ### Showing which provider said what
 

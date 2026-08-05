@@ -195,15 +195,17 @@ body {
 }
 
 /*
- * The avalanche bulletin.
+ * A notice: something the page states in its own right, rather than a reading
+ * off the timeline. The avalanche bulletin and the best-effort disclaimer are
+ * both this, so they share one surface instead of two lookalikes drifting
+ * apart.
  *
- * Given its own surface rather than a timeline row because it is somebody
- * else's official document, not a wanderbar verdict, and because its "we do not
- * know" states must never be mistaken for the clear verdict above it. The
- * unknown state is deliberately not red: it is not a warning, it is an absence,
- * and dressing it as danger would train people to dismiss it.
+ * `quiet` is deliberately not red. An absent bulletin is not a warning, it is
+ * an absence, and dressing it as danger would train people to dismiss it.
+ * `high` is the highlight: a warm edge and a wash of it, used where the page
+ * needs to be read before the thing it sits above.
  */
-.bulletin {
+.notice {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -213,11 +215,11 @@ body {
   background: var(--color-raised);
 }
 
-.bulletin-unknown {
+.notice-quiet {
   border-style: dashed;
 }
 
-.bulletin-high {
+.notice-high {
   border-color: var(--color-warn);
   background: color-mix(in srgb, var(--color-warn) 6%, var(--color-raised));
 }
