@@ -317,6 +317,14 @@ locally and `npx wrangler secret put VAPID_PRIVATE_KEY` in production.
 - **The DO class must be re-exported from the built entry**. See the
   `entryContentAfterHooks` in `vite.config.ts`, which keeps the adapter's own
   hook (it defines `merged`) ahead of ours.
+- **Leave the `` `esbuild` option was specified by "honox-vite-client" ``
+  build warning alone.** Vite 8 moved to Oxc and deprecated the top-level
+  `esbuild` option; honox 0.1.60, the latest release, still sets
+  `esbuild.jsxImportSource` and there is no upstream fix. Do **not** "fix" it by
+  adding a top-level `oxc` option: `oxc` beats `esbuild` for *both* builds, so
+  it forces `hono/jsx/dom` into the SSR bundle too and every page 500s with
+  `TypeError: e.search is not a function`. It has to stay a client-only setting,
+  which is honox's job, not ours. Removal is not until Vite 9.
 
 ## Attribution
 
