@@ -82,4 +82,14 @@ describe('AvalanchePanel', () => {
     expect(body({ ...base, level: 3 })).toContain('notice-high')
     expect(body({ ...base, level: 2 })).not.toContain('notice-high')
   })
+
+  it('offers to hide only the states that carry no danger level', () => {
+    // A reader may silence "we do not know", which repeats unchanged every
+    // sync. A real rating must not be dismissable at any level, or the app
+    // would let someone hide a 4 and then show them nothing.
+    for (const s of UNKNOWNS) expect(unknown(s), s).toContain('notice-hide')
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      expect(body({ ...base, level }), String(level)).not.toContain('notice-hide')
+    }
+  })
 })

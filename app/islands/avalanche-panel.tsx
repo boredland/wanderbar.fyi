@@ -1,4 +1,5 @@
 import { DANGER_LABEL, type Bulletin, type DangerLevel } from '../lib/avalanche'
+import { HideButton, useHidden } from '../lib/dismiss'
 
 /**
  * The avalanche bulletin, deliberately its own panel rather than a row in the
@@ -17,6 +18,11 @@ import { DANGER_LABEL, type Bulletin, type DangerLevel } from '../lib/avalanche'
  */
 export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
   const b = props.bulletin
+  /*
+   * Hooks run before the early returns, because hook order must not depend on
+   * whether a bulletin has arrived yet.
+   */
+  const [hidden, hide] = useHidden('avalanche-unknown')
   if (!b) return null
 
   const link = b.providerUrl ? (
@@ -26,8 +32,16 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
   ) : null
 
   if (b.status !== 'ok') {
+    /*
+     * Only the "we do not know" states can be hidden, and only because they
+     * are unactionable by design: they say the same thing every sync until the
+     * season or the coverage changes. A real danger level is never given the
+     * control, so no reader can dismiss a 4 and have it stay dismissed.
+     */
+    if (hidden) return null
     return (
       <section class="notice notice-quiet">
+        <HideButton onHide={hide} label="Hide the avalanche notice" />
         <p class="eyebrow">Avalanche</p>
         <p class="text-base font-semibold">{HEADLINE[b.status]}</p>
         <p class="text-sm text-muted">

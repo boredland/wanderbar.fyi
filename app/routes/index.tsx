@@ -1,4 +1,5 @@
 import { createRoute } from 'honox/factory'
+import BestEffort from '../islands/best-effort'
 import Manage from '../islands/manage'
 import PositionButton from '../islands/position-button'
 import ScheduleSettings from '../islands/schedule-settings'
@@ -340,14 +341,7 @@ export default createRoute((c) => {
         * shares the .notice surface with the avalanche bulletin because both
         * are wanderbar stating its own limits rather than reporting weather.
         */}
-      <p class="notice notice-high text-sm">
-        <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The
-        data comes from public models and can be wrong, late or missing, and mountain
-        weather turns faster than any forecast follows. Always check local sources too
-        where you can: the local avalanche or weather service, the hut warden, the valley
-        station. Treat wanderbar as one input to your own judgement, never as a reason to
-        set out.
-      </p>
+      <BestEffort />
 
       <TrackView />
 

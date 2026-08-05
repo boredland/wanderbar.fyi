@@ -225,6 +225,47 @@ body {
 }
 
 /*
+ * The dismiss control. Floated rather than laid out in the flex column so the
+ * prose keeps its own measure and every notice puts the control in the same
+ * corner regardless of what it contains. 44px of tap target per WCAG 2.5.5,
+ * while the cross itself stays small enough to read as chrome and not as a
+ * second action competing with the text.
+ */
+.notice {
+  position: relative;
+}
+
+.notice-hide {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 0.4rem;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.notice-hide:hover {
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-ink) 6%, transparent);
+}
+
+.notice-hide:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: -2px;
+}
+
+/* The control overlaps the corner, so text stops short of it on the first line. */
+.notice > :first-child:not(.notice-hide),
+.notice-hide + * {
+  padding-right: 2.5rem;
+}
+
+/*
  * Shared control surfaces. Defined once so hover, press, focus and disabled
  * states stay identical across every button and select, per Material's state
  * layer guidance, rather than being re-invented per island.

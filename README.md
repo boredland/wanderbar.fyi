@@ -44,6 +44,12 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
 - **Positioning is 2D.** GPS `altitude` is the wrong datum (ellipsoidal vs the
   GPX/DEM orthometric metres), platform-inconsistent and too noisy, so it is
   stored for diagnostics and read by nothing.
+- **localStorage holds hidden-notice flags and nothing else.** Every byte of
+  track and forecast data lives in the IndexedDB behind `store.ts`. The two
+  `wanderbar:hidden:*` keys are per-device chrome preference, and they are read
+  synchronously during hydration so a hidden notice does not flash back in for
+  a frame. They default to *visible* on failure: storage being blocked or full
+  must never be able to hide a safety notice from someone who did not hide it.
 - **Elevation is single-source per track** (`eleSource`): all-GPX, or all-DEM.
   Mixing them fabricates ascent at every boundary.
 - **Fire danger is computed, not fetched.** No public API serves a free
@@ -181,6 +187,7 @@ on every wake; that is lock-screen spam.
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/routes/api/fwi.ts` | Cached noon-sampled fire-weather inputs |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
+| `app/lib/dismiss.tsx` | `useHidden` + the shared hide control, backed by localStorage |
 | `app/style.css` | Design tokens, `.profile` gutter, `.notice`, shared control surfaces |
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |
 | `app/lib/sync.ts` | Fetch → evaluate → diff → persist |
@@ -214,6 +221,14 @@ lettering (`.eyebrow`) set in condensed Archivo.
   the one that must be read first; `.notice-quiet` goes dashed, because an
   absent bulletin is not a warning but an absence, and dressing it as danger
   would train people to dismiss it.
+- **Both notices can be hidden, but a danger level never can.** A caveat that
+  cannot be silenced is one people learn to look past, so `.notice-hide` is
+  offered on the best-effort banner and on the bulletin's four *unknown*
+  states, which repeat unchanged every sync and cannot be acted on. It is
+  deliberately **not** rendered when the bulletin carries a rating: nobody gets
+  to dismiss a 4 and have it stay dismissed. `app/islands/avalanche-panel.tsx`
+  checks `hidden` only inside the `status !== 'ok'` branch, and there is a test
+  asserting the control is absent at all five levels.
 - **The timeline's left gutter is the track's own elevation profile.** The
   profile is turned on its side so progress runs *down* the gutter, matching the
   reading direction: each row's lower edge is the next row's upper edge, which is
