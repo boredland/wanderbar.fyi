@@ -45,10 +45,15 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
 - **Positioning is 2D.** GPS `altitude` is the wrong datum (ellipsoidal vs the
   GPX/DEM orthometric metres), platform-inconsistent and too noisy, so it is
   stored for diagnostics and read by nothing.
-- **The cache holds the app, never the weather.** The service worker caches the
-  document (network-first) and hashed assets, fonts and weather icons, so a cold
-  start with no signal reaches the forecast already in IndexedDB instead of a
-  browser error page. It never touches `/api/*` or any non-GET request, so live
+- **The cache holds the app, never the weather.** The service worker precaches
+  the document, every hashed asset, the fonts and the weather icons at `install`,
+  then keeps them fresh at runtime (network-first on the document, cache-first on
+  hashed assets), so a cold start with no signal reaches the forecast already in
+  IndexedDB instead of a browser error page. Precaching is not an optimisation
+  here: a worker does not control the page that registered it, so on a first
+  visit every `/static/*` request goes *around* the fetch handler. Runtime
+  caching alone would leave someone who opens wanderbar once and walks out of
+  signal with a cached document and no code to run it. It never touches `/api/*` or any non-GET request, so live
   data cannot be served stale and the share-target POST cannot be swallowed.
   Forecast age has never been an HTTP concern — it is `forecast.fetchedAt` — and
   caching the shell does not change it by a second. What it does change is that
@@ -212,8 +217,13 @@ on every wake; that is lock-screen spam.
 | `app/lib/sync.ts` | Fetch → evaluate → diff → persist |
 | `app/waker.ts` | The Durable Object: one subscription, one schedule |
 | `app/sw/index.ts` | Service worker source; `public/sw.js` is **generated** |
+| `scripts/precache-manifest.ts` | Writes `app/sw/precache.ts` from the built asset manifest |
 
 `public/sw.js` is built by `npm run build:sw` and gitignored. Never edit it.
+`app/sw/precache.ts` is likewise generated and gitignored. Build order matters:
+`vite build --mode client` must run *first*, because the precache list is derived
+from the hashed filenames it emits, and `build:sw` bundles that list into the
+worker. `npm run build` sequences all three.
 
 Anything `.tsx` under `app/islands/` **is** an island: honox matches
 `^/app/islands/.+?\.tsx$` and makes each one a client entry. A test file named

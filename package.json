@@ -4,11 +4,12 @@
   "scripts": {
     "dev": "vite",
     "build:sw": "esbuild app/sw/index.ts --bundle --format=esm --target=es2022 --outfile=public/sw.js",
-    "build": "npm run build:sw && vite build --mode client && vite build",
+    "build": "vite build --mode client && npm run precache && npm run build:sw && vite build",
     "preview": "wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "test": "vitest run",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "precache": "node --experimental-strip-types scripts/precache-manifest.ts"
   },
   "private": true,
   "dependencies": {

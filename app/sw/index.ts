@@ -2,6 +2,7 @@
 import { notifyDelta } from '../lib/notify'
 import { get } from '../lib/store'
 import { syncNow } from '../lib/sync'
+import { PRECACHE } from './precache'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -44,15 +45,28 @@ const isStaticAsset = (p: string) =>
   p === '/apple-touch-icon.png'
 
 self.addEventListener('install', (e) => {
-  // Only the shell is fetched up front. Everything else arrives as it is used,
-  // which needs no build-time asset manifest and so cannot go stale against one.
+  /*
+   * The whole graph up front, not just the shell.
+   *
+   * A worker does not control the page that registers it: it activates after
+   * that page has already fetched its scripts, so on a first visit every
+   * /static/* request goes around the fetch handler below and nothing but the
+   * document would be stored. Someone who opens wanderbar once and walks out of
+   * signal would then get the cached shell and no code to run it. Precaching is
+   * the only thing that closes that window, and it is why the URL list is
+   * generated from the build manifest rather than discovered at runtime.
+   *
+   * addAll is atomic: one 404 leaves the cache empty rather than half-filled,
+   * which is the honest outcome, since a partial precache is exactly the
+   * broken-offline state this exists to prevent.
+   */
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.add(SHELL))
+      .then((c) => c.addAll([...PRECACHE]))
       .catch(() => {
-        // A failed precache must not block activation: the worker is still
-        // wanted for push, and the shell lands on the first navigation instead.
+        // Never block activation: the worker is still wanted for push, and the
+        // runtime handlers below refill the cache on the next navigation.
       })
   )
 })
