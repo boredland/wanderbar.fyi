@@ -5,9 +5,134 @@ import { syncNow } from '../lib/sync'
 
 declare const self: ServiceWorkerGlobalScope
 
-// Inert by design: registered only so Chrome offers the install prompt.
-// Caching here would serve stale forecasts and swallow the share POST.
-self.addEventListener('fetch', () => {})
+/*
+ * Bump on any change to the caching rules below. `activate` deletes every cache
+ * that is not this one, so an old shell cannot outlive the worker that wrote it.
+ */
+const CACHE = 'wanderbar-v1'
+
+/**
+ * The document, cached so the app can start without a network.
+ *
+ * The forecast itself has never come from HTTP — it lives in IndexedDB and is
+ * stamped with `fetchedAt` — so caching the shell changes nothing about how old
+ * the numbers are. It only decides whether the code that renders them, and
+ * states their age, can run at all. Without this, a cold start on a col with no
+ * signal is a browser error page while a complete forecast sits unreachable one
+ * layer below.
+ *
+ * The bargain is that the app now looks alive offline, which is exactly why
+ * `lib/freshness.ts` exists and why the offline path leads with an age notice
+ * rather than a footnote.
+ */
+const SHELL = '/'
+
+/** Immutable by construction: every one of these carries a content hash. */
+const isHashedAsset = (p: string) => p.startsWith('/static/')
+
+/**
+ * Static by deployment rather than by hash. Weather icons and fonts are the
+ * difference between an offline timeline that reads and one full of broken
+ * images in a fallback font, and both are refreshed in the background.
+ */
+const isStaticAsset = (p: string) =>
+  p.startsWith('/wx/') ||
+  p.startsWith('/fonts/') ||
+  p === '/manifest.webmanifest' ||
+  p === '/icon.svg' ||
+  p === '/favicon.ico' ||
+  p === '/apple-touch-icon.png'
+
+self.addEventListener('install', (e) => {
+  // Only the shell is fetched up front. Everything else arrives as it is used,
+  // which needs no build-time asset manifest and so cannot go stale against one.
+  e.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.add(SHELL))
+      .catch(() => {
+        // A failed precache must not block activation: the worker is still
+        // wanted for push, and the shell lands on the first navigation instead.
+      })
+  )
+})
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // No skipWaiting: a page already open keeps the worker it loaded with,
+      // so a deploy cannot swap the code under a hike in progress. The new
+      // worker takes over on the next cold start.
+      .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener('fetch', (e) => {
+  const req = e.request
+  // The share target is a POST of the user's GPX file and /api/* is live data
+  // whose staleness the app cannot see. Neither may ever be served from cache.
+  if (req.method !== 'GET') return
+  const url = new URL(req.url)
+  if (url.origin !== self.location.origin) return
+  if (url.pathname.startsWith('/api/')) return
+
+  if (req.mode === 'navigate') {
+    e.respondWith(navigateWithFallback(req))
+    return
+  }
+  if (isHashedAsset(url.pathname)) {
+    e.respondWith(cacheFirst(req))
+    return
+  }
+  if (isStaticAsset(url.pathname)) {
+    e.respondWith(staleWhileRevalidate(req))
+  }
+})
+
+/**
+ * Network first, cache only as the fallback.
+ *
+ * The document carries `VAPID_PUBLIC_KEY` and reads `?shareError`, so a cached
+ * copy is a deploy-old, query-blind approximation. Online it is never used;
+ * offline it is the whole point. The stored copy is keyed on the bare shell so
+ * that any route falls back to the same document, which then re-reads the real
+ * state from IndexedDB — including the key, which the app re-persists on mount.
+ */
+async function navigateWithFallback(req: Request): Promise<Response> {
+  const cache = await caches.open(CACHE)
+  try {
+    const res = await fetch(req)
+    if (res.ok) cache.put(SHELL, res.clone())
+    return res
+  } catch (err) {
+    const hit = await cache.match(SHELL)
+    if (hit) return hit
+    throw err
+  }
+}
+
+async function cacheFirst(req: Request): Promise<Response> {
+  const cache = await caches.open(CACHE)
+  const hit = await cache.match(req)
+  if (hit) return hit
+  const res = await fetch(req)
+  if (res.ok) cache.put(req, res.clone())
+  return res
+}
+
+async function staleWhileRevalidate(req: Request): Promise<Response> {
+  const cache = await caches.open(CACHE)
+  const hit = await cache.match(req)
+  const fresh = fetch(req)
+    .then((res) => {
+      if (res.ok) cache.put(req, res.clone())
+      return res
+    })
+    .catch(() => hit ?? Response.error())
+  return hit ?? fresh
+}
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()

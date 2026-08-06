@@ -24,7 +24,8 @@ warning. It does exactly three things:
 
 The service worker does the rest: on `push` it reads IndexedDB, fetches the
 forecast, evaluates warnings, diffs against the previous set, and shows a
-notification only on change.
+notification only on change. It also caches the app shell so wanderbar starts
+without a network; see the offline constraint below.
 
 ```
 GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
@@ -44,6 +45,22 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
 - **Positioning is 2D.** GPS `altitude` is the wrong datum (ellipsoidal vs the
   GPX/DEM orthometric metres), platform-inconsistent and too noisy, so it is
   stored for diagnostics and read by nothing.
+- **The cache holds the app, never the weather.** The service worker caches the
+  document (network-first) and hashed assets, fonts and weather icons, so a cold
+  start with no signal reaches the forecast already in IndexedDB instead of a
+  browser error page. It never touches `/api/*` or any non-GET request, so live
+  data cannot be served stale and the share-target POST cannot be swallowed.
+  Forecast age has never been an HTTP concern — it is `forecast.fetchedAt` — and
+  caching the shell does not change it by a second. What it does change is that
+  the app now *looks* alive offline, which is what `app/lib/freshness.ts` pays
+  for: one four-step age scale (`fresh`/`aging`/`stale`/`expired` at 2/6/12 h)
+  that the notice, the freshness row, the verdict and the timeline all read, so
+  they cannot disagree about how much trust the numbers still deserve. At
+  `expired` the verdict is **withdrawn**, not restyled: an all-clear computed
+  from yesterday's model is not a weaker all-clear, it is a false one. Map tiles
+  are the one asset never cached — bulk tile storage is against the OpenTopoMap
+  and OSM usage policies — so offline the map says so in words rather than
+  showing a blank sheet that reads as missing route data.
 - **localStorage holds hidden-notice flags and nothing else.** Every byte of
   track and forecast data lives in the IndexedDB behind `store.ts`. The two
   `wanderbar:hidden:*` keys are per-device chrome preference, and they are read
@@ -187,6 +204,8 @@ on every wake; that is lock-screen spam.
 | `app/lib/fwi.ts` | Canadian FWI System (Van Wagner & Pickett 1985) |
 | `app/routes/api/fwi.ts` | Cached noon-sampled fire-weather inputs |
 | `app/lib/icons.ts` | WMO → MET icon mapping |
+| `app/lib/freshness.ts` | The one forecast-age scale every staleness treatment reads |
+| `app/lib/online.ts` | `useOnline`; explains *why* data is old, never how old |
 | `app/lib/dismiss.tsx` | `useHidden` + the shared hide control, backed by localStorage |
 | `app/style.css` | Design tokens, `.profile` gutter, `.notice`, shared control surfaces |
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |

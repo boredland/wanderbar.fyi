@@ -25,6 +25,7 @@ type Props = {
   warningsBySeq: Record<number, Warning[]>
   forecast: Forecast | null
   anchorMs: number
+  online: boolean
 }
 
 export default function TrackMap(props: Props) {
@@ -159,6 +160,27 @@ export default function TrackMap(props: Props) {
     )
   }
   return (
-    <div ref={el} tabIndex={-1} class="h-80 w-full rounded-[10px] border border-line" />
+    <div class="flex flex-col gap-2">
+      {/*
+        * Said in words, because the failure is silent otherwise. Tiles are the
+        * one thing on this page that cannot be cached: bulk tile storage is
+        * against the OpenTopoMap and OSM usage policies, so offline the
+        * basemap is simply absent. Without this line an orange line on blank
+        * paper reads as "no route data", which is the opposite of the truth —
+        * the route, the markers and the pace are all from the device and are
+        * exactly as good offline as on.
+        */}
+      {!props.online ? (
+        <p class="text-xs text-muted">
+          No connection, so the map background cannot load. The route and its markers are
+          drawn from your device.
+        </p>
+      ) : null}
+      <div
+        ref={el}
+        tabIndex={-1}
+        class="h-80 w-full rounded-[10px] border border-line bg-raised"
+      />
+    </div>
   )
 }

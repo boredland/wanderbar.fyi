@@ -54,6 +54,14 @@ one schedule, nothing else.
   already been broken, which is the single biggest factor in how long a winter
   day actually takes. The warning reports the snow; judging the trail-breaking
   is the party's own.
+- The offline cache holds the app, never the weather. wanderbar starts without a
+  network and shows the last forecast that arrived, always stamped with when it
+  was fetched. Age is graded on one scale: past two hours the freshness line
+  turns, past six a notice states the age in words, and past twelve the verdict
+  is withdrawn and the timeline greyed, because a forecast that old describes
+  hours already gone. Map tiles are never cached, as bulk tile storage is
+  against the OpenTopoMap and OpenStreetMap usage policies, so offline the map
+  background is absent and says so.
 - Positioning is 2D. GPS altitude is the wrong datum, so it is stored for
   diagnostics and read by nothing.
 - Elevation is single-source per track, all-GPX or all-DEM, because mixing them

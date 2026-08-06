@@ -30,15 +30,22 @@ const FAQ: { q: string; a: unknown; text: string }[] = [
           yourself how old the numbers are.
         </p>
         <p>
-          What does not work offline is opening wanderbar fresh. There is no offline cache
-          on purpose: a cache here would serve you a stale forecast that looks current,
-          which is worse than an error. So load your track and sync before you lose
-          signal, and keep the tab or the app open on the way.
+          wanderbar also opens offline. The app itself is cached, so you can close it and
+          start it again with no signal and still read your track, your ETAs and the last
+          forecast that arrived. Only the map background is missing, because map tiles may
+          not be stored in bulk.
+        </p>
+        <p>
+          Nothing offline is ever passed off as current. The cache holds the app, never the
+          weather: every forecast is stamped with the moment it was fetched. Past two hours
+          the freshness line turns; past six a notice above the forecast says in words how
+          old it is; past twelve wanderbar withdraws its verdict altogether and greys the
+          timeline, because a forecast that old describes hours that have already gone.
         </p>
       </>
     ),
     text:
-      'The forecast you already have stays on screen. A failed fetch never blanks the timeline; the freshness line adds "last attempt failed", and the "Last fetched" time is always visible so you can judge how old the numbers are. What does not work offline is opening wanderbar fresh: there is deliberately no offline cache, because a cache would serve a stale forecast that looks current, which is worse than an error. Load your track and sync before you lose signal, and keep it open on the way.'
+      'The forecast you already have stays on screen. A failed fetch never blanks the timeline; the freshness line adds "last attempt failed", and the "Last fetched" time is always visible so you can judge how old the numbers are. wanderbar also opens offline: the app itself is cached, so you can close it and start it again with no signal and still read your track, your ETAs and the last forecast that arrived. Only the map background is missing, because map tiles may not be stored in bulk. Nothing offline is passed off as current. The cache holds the app, never the weather: every forecast is stamped with the moment it was fetched. Past two hours the freshness line turns, past six a notice above the forecast says in words how old it is, and past twelve wanderbar withdraws its verdict altogether and greys the timeline, because a forecast that old describes hours that have already gone.'
   },
   {
     q: 'Is my data safe?',
