@@ -1,9 +1,12 @@
 import { createRoute } from 'honox/factory'
 import ShareReceiver from '../../islands/share-receiver-island'
+import { translator } from '../../lib/i18n'
 
 const MAX_BYTES = 5 * 1024 * 1024
 
 export const POST = createRoute(async (c) => {
+  const locale = c.get('locale')
+  const t = translator(locale)
   const body = await c.req.parseBody()
   const file = body['gpx']
   if (!(file instanceof File)) return c.redirect('/?shareError=nofile', 303)
@@ -20,8 +23,8 @@ export const POST = createRoute(async (c) => {
   // so the bytes are handed to the client, which ingests them into IndexedDB.
   return c.render(
     <div class="mx-auto max-w-2xl p-4">
-      <title>Adding your track…</title>
-      <ShareReceiver />
+      <title>{t('share.adding')}</title>
+      <ShareReceiver locale={locale} />
       <script type="application/json" id="shared" dangerouslySetInnerHTML={{ __html: payload }} />
     </div>
   )

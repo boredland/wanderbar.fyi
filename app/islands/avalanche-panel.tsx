@@ -1,5 +1,7 @@
-import { DANGER_LABEL, type Bulletin, type DangerLevel } from '../lib/avalanche'
+import type { Bulletin, DangerLevel } from '../lib/avalanche'
 import { HideButton, useHidden } from '../lib/dismiss'
+import { splitAround, useLocale, type MessageKey } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 
 /**
  * The avalanche bulletin, deliberately its own panel rather than a row in the
@@ -16,18 +18,22 @@ import { HideButton, useHidden } from '../lib/dismiss'
  * points at the real bulletin, which is the document that actually governs the
  * decision.
  */
-export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
+export default function AvalanchePanel(props: { bulletin: Bulletin | null; locale: Locale }) {
   const b = props.bulletin
   /*
    * Hooks run before the early returns, because hook order must not depend on
    * whether a bulletin has arrived yet.
    */
   const [hidden, hide] = useHidden('avalanche-unknown')
+  const [, t] = useLocale(props.locale)
   if (!b) return null
+
+  const [checkBefore, checkAfter] = splitAround(t, 'avalanche.checkYourself', 'link')
+  const [readBefore, readAfter] = splitAround(t, 'avalanche.readBefore', 'link')
 
   const link = b.providerUrl ? (
     <a class="underline" href={b.providerUrl} target="_blank" rel="noopener noreferrer">
-      {b.provider || 'the official bulletin'}
+      {b.provider || t('avalanche.theOfficialBulletin')}
     </a>
   ) : null
 
@@ -41,12 +47,12 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
     if (hidden) return null
     return (
       <section class="notice notice-quiet">
-        <HideButton onHide={hide} label="Hide the avalanche notice" />
-        <p class="eyebrow">Avalanche</p>
-        <p class="text-base font-semibold">{HEADLINE[b.status]}</p>
+        <HideButton onHide={hide} label={t('avalanche.hide')} />
+        <p class="eyebrow">{t('avalanche.eyebrow')}</p>
+        <p class="text-base font-semibold">{t(HEADLINE[b.status])}</p>
         <p class="text-sm text-muted">
-          {BODY[b.status]}
-          {link ? <> Check {link} yourself.</> : null}
+          {t(BODY[b.status])}
+          {link ? <> {checkBefore}{link}{checkAfter}</> : null}
         </p>
       </section>
     )
@@ -55,9 +61,9 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
   const level = b.level as DangerLevel
   return (
     <section class={`notice ${level >= 3 ? 'notice-high' : ''}`}>
-      <p class="eyebrow">Avalanche</p>
+      <p class="eyebrow">{t('avalanche.eyebrow')}</p>
       <p class="display text-xl font-bold leading-tight">
-        <span class="figures">{level}</span> &mdash; {DANGER_LABEL[level]}
+        <span class="figures">{level}</span> &mdash; {t(`danger.${level}` as MessageKey)}
         {b.region ? <span class="text-base font-normal text-muted"> · {b.region}</span> : null}
       </p>
       {b.bands.length > 1 ? (
@@ -66,11 +72,11 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
             <span key={i}>
               {i > 0 ? ' · ' : ''}
               {x.aboveM !== null
-                ? `above ${x.aboveM} m`
+                ? t('avalanche.band.above', { m: x.aboveM })
                 : x.belowM !== null
-                  ? `below ${x.belowM} m`
-                  : 'overall'}
-              : {DANGER_LABEL[x.level]}
+                  ? t('avalanche.band.below', { m: x.belowM })
+                  : t('avalanche.band.overall')}
+              : {t(`danger.${x.level}` as MessageKey)}
             </span>
           ))}
         </p>
@@ -84,28 +90,24 @@ export default function AvalanchePanel(props: { bulletin: Bulletin | null }) {
         * not know which slope you will stand on, and neither does wanderbar.
         */}
       <p class="text-sm text-muted">
-        Danger varies by slope angle and aspect, which wanderbar does not know.
-        {link ? <> Read {link} before you go.</> : null}
+        {t('avalanche.slopeCaveat')}
+        {link ? <> {readBefore}{link}{readAfter}</> : null}
       </p>
     </section>
   )
 }
 
 /** Each non-answer says plainly that it is not an all-clear. */
-const HEADLINE: Record<string, string> = {
-  'no-coverage': 'No avalanche bulletin covers this route',
-  'out-of-season': 'No bulletin published right now',
-  stale: 'The bulletin we found is out of date',
-  error: 'Could not reach the avalanche service'
+const HEADLINE: Record<string, MessageKey> = {
+  'no-coverage': 'avalanche.head.noCoverage',
+  'out-of-season': 'avalanche.head.outOfSeason',
+  stale: 'avalanche.head.stale',
+  error: 'avalanche.head.error'
 }
 
-const BODY: Record<string, string> = {
-  'no-coverage':
-    'wanderbar has no official source for this area, so it cannot tell you anything about avalanche danger. That is not the same as safe.',
-  'out-of-season':
-    'The service covering this area is not publishing today, which is normal outside winter. Snow can still slide, and this is not an all-clear.',
-  stale:
-    'It is outside its validity window, so it describes past snow, not today. wanderbar will not show an out-of-date danger level.',
-  error:
-    'This may just be a dropped connection. wanderbar has no danger level for this route, which is not the same as no danger.'
+const BODY: Record<string, MessageKey> = {
+  'no-coverage': 'avalanche.body.noCoverage',
+  'out-of-season': 'avalanche.body.outOfSeason',
+  stale: 'avalanche.body.stale',
+  error: 'avalanche.body.error'
 }

@@ -8,7 +8,8 @@ import {
   type Thresholds,
   type Warning
 } from './warnings'
-import { conditionLabel } from './icons'
+import { detailText, translator, type MessageKey } from './i18n'
+import { LOCALES } from './i18n/locale'
 import type { Waypoint } from './track'
 import type { Hour, SunDay, WaypointForecast } from './weather'
 
@@ -146,32 +147,52 @@ describe('warning detail copy', () => {
       { [date]: 44 }
     )
     expect(got.length).toBeGreaterThan(4)
+    const t = translator('en')
     for (const w of got) {
-      const label = conditionLabel[w.condition].toLowerCase()
-      expect(w.detail.toLowerCase(), `${w.condition}: "${w.detail}"`).not.toContain(label)
+      // The rendered phrase is what a reader sees, so the rule is checked there
+      // rather than on the structured detail behind it.
+      const text = detailText(t, 'en', w.detail)
+      const label = t(`condition.${w.condition}` as MessageKey).toLowerCase()
+      expect(text.toLowerCase(), `${w.condition}: "${text}"`).not.toContain(label)
       // Nor a bare noun the label already implies.
       for (const word of label.split(' ')) {
-        expect(w.detail.toLowerCase(), `${w.condition}: "${w.detail}"`).not.toContain(word)
+        expect(text.toLowerCase(), `${w.condition}: "${text}"`).not.toContain(word)
       }
-      expect(w.detail, `${w.condition} has nested parens`).not.toMatch(/\(/)
-      expect(w.detail.length, `${w.condition} detail empty`).toBeGreaterThan(0)
+      expect(text, `${w.condition} has nested parens`).not.toMatch(/\(/)
+      expect(text.length, `${w.condition} detail empty`).toBeGreaterThan(0)
     }
   })
 
-  it('describes thunderstorm strength in words, not raw CAPE joules', () => {
-    const run = (capeJkg: number | null) =>
-      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(hour({ code: 95, capeJkg })), [wp(0, 0)], 0, NOW)
-        .find((w) => w.condition === 'thunderstorm')!.detail
-    expect(run(1680)).toBe('strong updrafts')
-    expect(run(3200)).toBe('violent updrafts')
-    expect(run(500)).toBe('weak updrafts')
+  it('describes thunderstorm strength in bands, not raw CAPE joules', () => {
+    const run = (capeJkg: number | null) => {
+      const d = evaluateWarnings(
+        DEFAULT_THRESHOLDS,
+        forecast(hour({ code: 95, capeJkg })),
+        [wp(0, 0)],
+        0,
+        NOW
+      ).find((w) => w.condition === 'thunderstorm')!.detail
+      expect(d.kind).toBe('instability')
+      return d.kind === 'instability' ? d.band : null
+    }
+    expect(run(1680)).toBe('strong')
+    expect(run(3200)).toBe('violent')
+    expect(run(500)).toBe('weak')
     expect(run(100)).toBe('expected')
     expect(run(null)).toBe('expected')
-    expect(run(1680)).not.toContain('1680')
+    // The raw joules must never reach the reader, in any language.
+    expect(detailText(translator('en'), 'en', { kind: 'instability', band: 'strong' })).not.toContain(
+      '1680'
+    )
   })
 
-  it('covers every condition with a label', () => {
-    for (const c of everyCondition) expect(conditionLabel[c]).toBeTruthy()
+  it('covers every condition with a label in every language', () => {
+    for (const locale of LOCALES) {
+      const t = translator(locale)
+      for (const c of everyCondition) {
+        expect(t(`condition.${c}` as MessageKey), `${locale}/${c}`).toBeTruthy()
+      }
+    }
   })
 })
 
@@ -196,16 +217,16 @@ describe('fire danger', () => {
   it('warns at and above the configured class', () => {
     const got = run(30)
     expect(got).toHaveLength(1)
-    expect(got[0].detail).toBe('high, FWI 30')
+    expect(got[0].detail).toEqual({ kind: 'fire', danger: 'high', fwi: 30 })
   })
 
   it('respects a stricter threshold', () => {
     expect(run(30, 'extreme')).toHaveLength(0)
-    expect(run(60, 'extreme')[0].detail).toContain('extreme')
+    expect(run(60, 'extreme')[0].detail).toMatchObject({ danger: 'extreme' })
   })
 
   it('respects a looser threshold', () => {
-    expect(run(15, 'moderate')[0].detail).toContain('moderate')
+    expect(run(15, 'moderate')[0].detail).toMatchObject({ danger: 'moderate' })
   })
 
   it('stays quiet when no fire data is available for that day', () => {
@@ -245,19 +266,19 @@ describe('darkness', () => {
     const got = at(NOW + 5 * 3600_000)
     expect(got).toHaveLength(1)
     // The label already says "Darkness"; the detail carries the useful fact.
-    expect(got[0].detail).toMatch(/^sunrise /)
+    expect(got[0].detail.kind).toBe('sunrise')
   })
 
   it('warns before sunrise', () => {
-    expect(at(NOW - 5 * 3600_000)[0].detail).toMatch(/^sunrise /)
+    expect(at(NOW - 5 * 3600_000)[0].detail.kind).toBe('sunrise')
   })
 
   it('flags the dusk window, which catches people out on a descent', () => {
-    expect(at(NOW + 2 * 3600_000 - 10 * 60_000)[0].detail).toMatch(/^dusk, sunset /)
+    expect(at(NOW + 2 * 3600_000 - 10 * 60_000)[0].detail.kind).toBe('dusk')
   })
 
   it('flags the hour just after sunset separately from full dark', () => {
-    expect(at(NOW + 2 * 3600_000 + 10 * 60_000)[0].detail).toMatch(/^after sunset /)
+    expect(at(NOW + 2 * 3600_000 + 10 * 60_000)[0].detail.kind).toBe('afterSunset')
   })
 
   it('honours the disabled toggle', () => {
@@ -290,7 +311,7 @@ describe('one warning per waypoint and condition', () => {
     )
     expect(got).toHaveLength(1)
     // The ETA hour is 34 °C, not the neighbouring hours.
-    expect(got[0].detail).toBe('34.0 °C')
+    expect(got[0].detail).toEqual({ kind: 'heat', tempC: 34 })
     expect(got[0].forecastHour).toBe(NOW)
   })
 
@@ -365,7 +386,7 @@ describe('the warning baseline', () => {
     seq,
     condition,
     forecastHour: NOW,
-    detail: 'x',
+    detail: { kind: 'hailPossible' },
     source: 'open-meteo'
   })
 
@@ -390,7 +411,7 @@ describe('diffWarnings', () => {
     seq,
     condition,
     forecastHour,
-    detail: 'x',
+    detail: { kind: 'hailPossible' },
     source: 'open-meteo'
   })
 
@@ -461,8 +482,12 @@ describe('winter hiking', () => {
   it('names which kind of freezing precipitation it is', () => {
     const detail = (code: number) =>
       evaluate(hour({ code })).find((w) => w.condition === 'ice')!.detail
-    expect(detail(56)).toBe('freezing drizzle')
-    expect(detail(67)).toBe('heavy freezing rain')
+    expect(detail(56)).toEqual({ kind: 'icePrecip', code: 56 })
+    expect(detail(67)).toEqual({ kind: 'icePrecip', code: 67 })
+    // The code must reach the reader as words, not as a number.
+    const t = translator('en')
+    expect(detailText(t, 'en', detail(56))).toBe('freezing drizzle')
+    expect(detailText(t, 'en', detail(67))).toBe('heavy freezing rain')
   })
 
   it('applies the wind chill threshold at the boundary', () => {
@@ -482,8 +507,9 @@ describe('winter hiking', () => {
       evaluate(hour({ tempC, windKmh }), thresholds({ windChillC: -5 })).find(
         (w) => w.condition === 'coldwind'
       )!.detail
-    expect(detail(-30, 40)).toContain('frostbite 5-10 min')
-    expect(detail(-10, 20)).not.toContain('frostbite')
+    expect(detail(-30, 40)).toMatchObject({ frostbite: '5to10' })
+    expect(detail(-10, 20)).toMatchObject({ frostbite: null })
+    expect(detailText(translator('en'), 'en', detail(-30, 40))).toContain('frostbite 5-10 min')
   })
 
   it('warns on lying snow, independently of whether it is falling', () => {
@@ -501,7 +527,7 @@ describe('winter hiking', () => {
 
   it('reports lying snow in centimetres, which is how it is spoken about', () => {
     const w = evaluate(hour({ snowDepthM: 0.85 })).find((x) => x.condition === 'deepsnow')!
-    expect(w.detail).toBe('85 cm lying')
+    expect(w.detail).toEqual({ kind: 'lyingSnow', cm: 85 })
   })
 
   it('leaves every winter condition individually switchable', () => {

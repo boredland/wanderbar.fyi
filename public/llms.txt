@@ -54,6 +54,12 @@ one schedule, nothing else.
   already been broken, which is the single biggest factor in how long a winter
   day actually takes. The warning reports the snow; judging the trail-breaking
   is the party's own.
+- Available in English (/), German (/de) and French (/fr). It is one screen in
+  three languages, with reciprocal hreflang; the bare root negotiates from
+  Accept-Language, and a reader's explicit choice is remembered. Avalanche
+  bulletins are the exception: they are relayed in the language the issuing
+  service publishes them in and never machine-translated, because an official
+  safety document is not something to paraphrase.
 - The offline cache holds the app, never the weather. wanderbar starts without a
   network and shows the last forecast that arrived, always stamped with when it
   was fetched. Age is graded on one scale: past two hours the freshness line

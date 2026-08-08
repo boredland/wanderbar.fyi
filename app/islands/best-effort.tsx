@@ -1,4 +1,6 @@
 import { HideButton, useHidden } from '../lib/dismiss'
+import { useLocale } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 
 /**
  * The best-effort caveat, above the forecast.
@@ -7,19 +9,16 @@ import { HideButton, useHidden } from '../lib/dismiss'
  * read through, so it is stated once and stated first; hiding it is the
  * reader's choice on their own device, not something the page decides.
  */
-export default function BestEffort() {
+export default function BestEffort(props: { locale: Locale }) {
   const [hidden, hide] = useHidden('best-effort')
+  const [, t] = useLocale(props.locale)
   if (hidden) return null
 
   return (
     <p class="notice notice-high text-sm">
-      <HideButton onHide={hide} label="Hide the best-effort notice" />
+      <HideButton onHide={hide} label={t('bestEffort.hide')} />
       <span>
-        <strong class="font-medium text-ink">This is a best-effort forecast.</strong> The data
-        comes from public models and can be wrong, late or missing, and mountain weather turns
-        faster than any forecast follows. Always check local sources too where you can: the local
-        avalanche or weather service, the hut warden, the valley station. Treat wanderbar as one
-        input to your own judgement, never as a reason to set out.
+        <strong class="font-medium text-ink">{t('bestEffort.lead')}</strong> {t('bestEffort.body')}
       </span>
     </p>
   )

@@ -1,12 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  wanderbar has exactly one indexable URL. /api/* serves no documents and the
-  404/error routes are not canonical destinations, so this file stays a single
-  entry rather than being padded to look like a bigger site.
+  wanderbar has one screen in three languages, so it has exactly three
+  indexable URLs. Each entry declares the full reciprocal hreflang set,
+  including itself, which is what tells a crawler these are translations of one
+  page rather than three competing near-duplicates. x-default is the root: it
+  is also the URL that negotiates from Accept-Language.
+
+  /api/* serves no documents and the 404/error routes are not canonical
+  destinations, so this file stays these three rather than being padded to look
+  like a bigger site.
 -->
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
+>
   <url>
     <loc>https://wanderbar.fyi/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://wanderbar.fyi/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://wanderbar.fyi/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://wanderbar.fyi/fr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://wanderbar.fyi/" />
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://wanderbar.fyi/de</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://wanderbar.fyi/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://wanderbar.fyi/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://wanderbar.fyi/fr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://wanderbar.fyi/" />
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://wanderbar.fyi/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://wanderbar.fyi/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://wanderbar.fyi/de" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://wanderbar.fyi/fr" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://wanderbar.fyi/" />
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>

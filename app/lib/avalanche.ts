@@ -30,14 +30,6 @@ import type { Waypoint } from './track'
 /** EAWS danger levels; the same 1-5 scale is used by NVE and Avalanche Canada. */
 export type DangerLevel = 1 | 2 | 3 | 4 | 5
 
-export const DANGER_LABEL: Record<DangerLevel, string> = {
-  1: 'Low',
-  2: 'Moderate',
-  3: 'Considerable',
-  4: 'High',
-  5: 'Very high'
-}
-
 /**
  * Why there is no number, when there is none. Each is a distinct state the UI
  * must be able to say out loud, because "we could not tell you" and "it is

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DANGER_LABEL,
   fetchBulletin,
   inGeometry,
   parseLevel,
@@ -39,10 +38,6 @@ describe('parseLevel', () => {
     expect(parseLevel('unknown')).toBeNull()
     expect(parseLevel(null)).toBeNull()
     expect(parseLevel(undefined)).toBeNull()
-  })
-
-  it('labels every level on the scale', () => {
-    for (const l of [1, 2, 3, 4, 5] as DangerLevel[]) expect(DANGER_LABEL[l]).toBeTruthy()
   })
 })
 

@@ -1,8 +1,19 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
 import AvalanchePanel from './avalanche-panel'
 import { ConditionIcon } from '../lib/condition-icon'
-import { ageText, freshnessOf, type Freshness } from '../lib/freshness'
-import { conditionLabel, isDayHour, sourceLabel, wmoIcon } from '../lib/icons'
+import { freshnessOf, type Freshness } from '../lib/freshness'
+import {
+  ageText,
+  clockAt,
+  detailText,
+  num,
+  parts,
+  useLocale,
+  type MessageKey,
+  type T
+} from '../lib/i18n'
+import { LOWERCASES_NOUNS, type Locale } from '../lib/i18n/locale'
+import { isDayHour, wmoIcon } from '../lib/icons'
 import { notifyDelta } from '../lib/notify'
 import { useOnline } from '../lib/online'
 import { get, set, type Fix, type Forecast, type Track } from '../lib/store'
@@ -18,24 +29,21 @@ import TrackMap from './track-map'
  * from a global elevation model are not the same claim, and only one of them
  * was measured anywhere near the trail.
  */
-const ELE_SOURCE: Record<Track['eleSource'], string | null> = {
-  gpx: 'from your GPX',
-  dem: 'from elevation model',
+const ELE_SOURCE: Record<Track['eleSource'], MessageKey | null> = {
+  gpx: 'stats.eleFromGpx',
+  dem: 'stats.eleFromDem',
   none: null
 }
 
 const OLD_FIX_MS = 6 * 3600_000
 const REFRESH_MS = 30 * 60_000
 
-const clock = (ms: number) =>
-  new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-
 /** Times more than a day out need their date, or "07:00" is ambiguous. */
-const dayTime = (ms: number, now: number) => {
+const dayTime = (locale: Locale, ms: number, now: number) => {
   const sameDay = new Date(ms).toDateString() === new Date(now).toDateString()
   return sameDay
-    ? clock(ms)
-    : new Date(ms).toLocaleString([], {
+    ? clockAt(locale, ms)
+    : new Date(ms).toLocaleString(locale, {
         weekday: 'short',
         hour: '2-digit',
         minute: '2-digit'
@@ -55,13 +63,14 @@ const nearestHour = (hours: Hour[], t: number): Hour | null => {
   return bestGap <= 3600_000 ? best : null
 }
 
-const hoursToText = (s: number) => {
+const hoursToText = (t: T, s: number) => {
   const h = Math.floor(s / 3600)
   const m = Math.round((s % 3600) / 60)
-  return h > 0 ? `${h} h ${m} min` : `${m} min`
+  return h > 0 ? t('duration.hoursMinutes', { h, m }) : t('duration.minutes', { m })
 }
 
-export default function TrackView() {
+export default function TrackView(props: { locale: Locale }) {
+  const [locale, t] = useLocale(props.locale)
   const [track, setTrack] = useState<Track | null>(null)
   const [forecast, setForecast] = useState<Forecast | null>(null)
   const [fix, setFix] = useState<Fix | null>(null)
@@ -125,18 +134,15 @@ export default function TrackView() {
     return () => clearInterval(id)
   }, [refetch])
 
-  if (!loaded) return <div class="py-6 text-muted">Loading…</div>
+  if (!loaded) return <div class="py-6 text-muted">{t('common.loading')}</div>
 
   // First run: without this the page is a logo above four collapsed panels,
   // which tells a new visitor nothing about what the app is for.
   if (!track) {
     return (
       <section class="flex flex-col gap-3">
-        <h2 class="display text-xl font-bold">Add a GPX track</h2>
-        <p class="text-sm text-muted">
-          wanderbar works out roughly where you will be along your route and shows the
-          weather for the rest of it, warning you only when conditions change.
-        </p>
+        <h2 class="display text-xl font-bold">{t('empty.heading')}</h2>
+        <p class="text-sm text-muted">{t('empty.body')}</p>
         <button
           type="button"
           class="btn btn-primary self-start"
@@ -149,7 +155,7 @@ export default function TrackView() {
             }
           }}
         >
-          Choose a GPX file
+          {t('empty.cta')}
         </button>
       </section>
     )
@@ -177,6 +183,8 @@ export default function TrackView() {
         online={online}
         done={done}
         now={now}
+        t={t}
+        locale={locale}
       />
 
       <Verdict
@@ -187,9 +195,11 @@ export default function TrackView() {
         anchorMs={anchorMs}
         now={now}
         freshness={freshness}
+        t={t}
+        locale={locale}
       />
 
-      <AvalanchePanel bulletin={forecast?.avalanche ?? null} />
+      <AvalanchePanel bulletin={forecast?.avalanche ?? null} locale={locale} />
 
       <PositionLine
         track={track}
@@ -197,9 +207,11 @@ export default function TrackView() {
         currentSeq={currentSeq}
         now={now}
         anchorMs={anchorMs}
+        t={t}
+        locale={locale}
       />
 
-      <StartRow track={track} now={now} onChanged={refetch} />
+      <StartRow track={track} now={now} onChanged={refetch} t={t} locale={locale} />
 
       <FreshnessRow
         forecast={forecast}
@@ -209,31 +221,37 @@ export default function TrackView() {
         freshness={freshness}
         online={online}
         onRefetch={refetch}
+        t={t}
+        locale={locale}
       />
 
       <dl class="graticule flex flex-wrap gap-x-6 gap-y-2 pb-3">
-        {[
-          ['Time', hoursToText(totalS), null],
-          ['Distance', `${(track.lengthM / 1000).toFixed(1)} km`, null],
-          // Heights are a property of the whole track, so the source belongs
-          // here rather than repeated against all sixty waypoints.
-          ['Up', `${Math.round(track.ascentM)} m`, ELE_SOURCE[track.eleSource]],
-          ['Down', `${Math.round(track.descentM)} m`, ELE_SOURCE[track.eleSource]]
-        ].map(([label, value, note]) => (
+        {(
+          [
+            ['stats.time', hoursToText(t, totalS), null],
+            ['stats.distance', `${num(locale, track.lengthM / 1000, 1)} km`, null],
+            // Heights are a property of the whole track, so the source belongs
+            // here rather than repeated against all sixty waypoints.
+            ['stats.up', `${num(locale, Math.round(track.ascentM))} m`, ELE_SOURCE[track.eleSource]],
+            [
+              'stats.down',
+              `${num(locale, Math.round(track.descentM))} m`,
+              ELE_SOURCE[track.eleSource]
+            ]
+          ] as [MessageKey, string, MessageKey | null][]
+        ).map(([label, value, note]) => (
           <div key={label}>
-            <dt class="eyebrow">{label}</dt>
+            <dt class="eyebrow">{t(label)}</dt>
             <dd class="figures text-lg font-bold">{value}</dd>
-            {note ? <dd class="text-2xs text-muted">{note}</dd> : null}
+            {note ? <dd class="text-2xs text-muted">{t(note)}</dd> : null}
           </div>
         ))}
       </dl>
 
       {done ? (
-        <p class="text-base">This hike is done.</p>
+        <p class="text-base">{t('verdict.done')}</p>
       ) : forecast === null ? (
-        <p class="text-base text-muted">
-          Fetching the forecast, reload in a moment.
-        </p>
+        <p class="text-base text-muted">{t('timeline.fetching')}</p>
       ) : null}
 
       <Timeline
@@ -243,6 +261,8 @@ export default function TrackView() {
         anchorMs={anchorMs}
         now={now}
         freshness={freshness}
+        t={t}
+        locale={locale}
       />
 
       <TrackMap
@@ -254,16 +274,17 @@ export default function TrackView() {
         forecast={forecast}
         anchorMs={anchorMs}
         online={online}
+        locale={locale}
       />
 
-      <CapabilityLine subscribed={subscribed} schedule={schedule} />
+      <CapabilityLine subscribed={subscribed} schedule={schedule} t={t} />
 
       <p class="text-xs text-muted">
-        Weather data by{' '}
+        {t('credits.weatherBy')}{' '}
         <a class="underline" rel="noopener noreferrer" href="https://open-meteo.com/">
           Open-Meteo.com
         </a>{' '}
-        · Cross-check from the Norwegian Meteorological Institute / Yr · Weather icons ©{' '}
+        · {t('credits.crossCheck')} · {t('credits.icons')}{' '}
         <a class="underline" rel="noopener noreferrer" href="https://github.com/metno/weathericons">
           MET Norway
         </a>{' '}
@@ -296,6 +317,8 @@ function StaleNotice(props: {
   online: boolean
   done: boolean
   now: number
+  t: T
+  locale: Locale
 }) {
   // A finished hike has no hours ahead to be wrong about, and "never fetched"
   // is already the whole of what the page says while the first sync runs.
@@ -303,24 +326,19 @@ function StaleNotice(props: {
   if (props.freshness === 'fresh' || props.freshness === 'aging') return null
   if (!props.forecast) return null
 
-  const age = ageText(props.now - props.forecast.fetchedAt)
+  const t = props.t
+  const age = ageText(t, props.locale, props.now - props.forecast.fetchedAt)
   const expired = props.freshness === 'expired'
 
   return (
     <section class="notice notice-high" role="status" aria-live="polite">
-      <p class="eyebrow">Old forecast</p>
+      <p class="eyebrow">{t('stale.eyebrow')}</p>
       <p class="text-base font-semibold">
-        {expired
-          ? `These numbers are ${age} old and no longer describe today.`
-          : `This forecast is ${age} old.`}
+        {expired ? t('stale.headingExpired', { age }) : t('stale.headingStale', { age })}
       </p>
       <p class="text-sm text-muted">
-        {expired
-          ? 'A forecast this old was made for hours that have already passed. Treat everything below as history, not as what is coming.'
-          : 'Mountain weather moves faster than this. Everything below still describes the conditions expected at the last sync, not now.'}{' '}
-        {props.online
-          ? 'You appear to be online, so a refetch should work.'
-          : 'You appear to be offline, so wanderbar cannot refresh it until you have signal again.'}
+        {expired ? t('stale.bodyExpired') : t('stale.bodyStale')}{' '}
+        {props.online ? t('stale.online') : t('stale.offline')}
       </p>
     </section>
   )
@@ -334,22 +352,23 @@ function Verdict(props: {
   anchorMs: number
   now: number
   freshness: Freshness
+  t: T
+  locale: Locale
 }) {
+  const t = props.t
   if (props.done) {
     return (
       <div class="verdict flex items-start gap-3">
         <span class="disc text-lg" aria-hidden="true">
           ✓
         </span>
-        <p class="display pt-2 text-xl font-bold leading-tight">This hike is done.</p>
+        <p class="display pt-2 text-xl font-bold leading-tight">{t('verdict.done')}</p>
       </div>
     )
   }
   if (!props.forecast) {
     return (
-      <p class="display text-xl font-bold leading-tight text-muted">
-        Checking the weather ahead…
-      </p>
+      <p class="display text-xl font-bold leading-tight text-muted">{t('verdict.checking')}</p>
     )
   }
   /*
@@ -360,9 +379,7 @@ function Verdict(props: {
    */
   if (props.freshness === 'expired') {
     return (
-      <p class="display text-xl font-bold leading-tight text-muted">
-        No current forecast for the hours ahead.
-      </p>
+      <p class="display text-xl font-bold leading-tight text-muted">{t('verdict.expired')}</p>
     )
   }
 
@@ -380,32 +397,36 @@ function Verdict(props: {
         <span class="disc disc-clear text-lg" aria-hidden="true">
           ✓
         </span>
-        <p class="display pt-2 text-xl font-bold leading-tight text-clear">
-          No un-wanderbar weather ahead.
-        </p>
+        <p class="display pt-2 text-xl font-bold leading-tight text-clear">{t('verdict.clear')}</p>
       </div>
     )
   }
   const at = props.anchorMs + first.wp.etaOffsetS * 1000
-  const label = <span class="text-warn">{conditionLabel[first.w.condition].toLowerCase()}</span>
+  const raw = t(`condition.${first.w.condition}` as MessageKey)
+  // German capitalises nouns mid-sentence; "dann regen" is not a word.
+  const word = LOWERCASES_NOUNS[props.locale] ? raw.toLowerCase() : raw
+  const label = <span class="text-warn">{word}</span>
   // "Clear until X" is a lie when the very first waypoint is already warned.
   const immediate = first.wp.seq === props.remaining[0]?.seq
+  const sentence = parts(t, immediate ? 'verdict.immediate' : 'verdict.later', {
+    km: num(props.locale, first.wp.cumDistM / 1000, 1)
+  })
   return (
     <div class="verdict flex items-start gap-3">
       <span class="disc disc-warn" aria-hidden="true">
         <ConditionIcon condition={first.w.condition} size={22} />
       </span>
       <p class="display text-xl font-bold leading-tight" role="status" aria-live="polite">
-        {immediate ? (
-          <>
-            {label} from the start, at{' '}
-            <span class="figures">{dayTime(at, props.now)}</span>.
-          </>
-        ) : (
-          <>
-            Clear until <span class="figures">{dayTime(at, props.now)}</span>, then {label} at{' '}
-            <span class="figures">km {(first.wp.cumDistM / 1000).toFixed(1)}</span>.
-          </>
+        {sentence.map((part, i) =>
+          typeof part === 'string' ? (
+            <span key={i}>{part}</span>
+          ) : part.slot === 'condition' ? (
+            <span key={i}>{label}</span>
+          ) : (
+            <span key={i} class="figures">
+              {dayTime(props.locale, at, props.now)}
+            </span>
+          )
         )}
       </p>
     </div>
@@ -418,41 +439,36 @@ function PositionLine(props: {
   currentSeq: number
   now: number
   anchorMs: number
+  t: T
+  locale: Locale
 }) {
+  const t = props.t
   const km = (props.track.waypoints[props.currentSeq]?.cumDistM ?? 0) / 1000
   if (!props.fix) {
     // Honesty rule: say which assumption the times rest on.
     if (props.track.startAt === null) {
-      return <p class="text-sm text-muted">Times assume you start now.</p>
+      return <p class="text-sm text-muted">{t('position.startAssumeNow')}</p>
     }
     const started = props.anchorMs <= props.now
+    const time = dayTime(props.locale, props.anchorMs, props.now)
     return (
       <p class="text-sm text-muted">
-        {started ? 'Started' : 'Starting'}{' '}
-        <span class="figures">{dayTime(props.anchorMs, props.now)}</span>
-        {started ? ' (no position yet, times assume you kept pace)' : ''}
+        {started ? t('position.started', { time }) : t('position.starting', { time })}
+        {started ? t('position.keptPace') : ''}
       </p>
     )
   }
   const measured = props.currentSeq === props.fix.snappedSeq
   const age = props.now - props.fix.at
   const fixKm = (props.track.waypoints[props.fix.snappedSeq]?.cumDistM ?? 0) / 1000
-  const stale = age > OLD_FIX_MS ? ', your position may be well off' : ''
-  const offTrack =
-    props.fix.snappedDistM > 5000 ? ', you appear to be >5 km off this track' : ''
+  const stale = age > OLD_FIX_MS ? t('position.fixStale') : ''
+  const offTrack = props.fix.snappedDistM > 5000 ? t('position.offTrack') : ''
+  const time = clockAt(props.locale, props.fix.at)
   return (
     <p class="text-sm text-muted">
-      {measured ? (
-        <>
-          You&rsquo;re at <span class="figures">km {fixKm.toFixed(1)}</span> (
-          <span class="figures">{clock(props.fix.at)}</span>)
-        </>
-      ) : (
-        <>
-          ≈ <span class="figures">km {km.toFixed(1)}</span>, estimated from your{' '}
-          <span class="figures">{clock(props.fix.at)}</span> position
-        </>
-      )}
+      {measured
+        ? t('position.youAreAt', { km: num(props.locale, fixKm, 1), time })
+        : t('position.estimated', { km: num(props.locale, km, 1), time })}
       {stale}
       {offTrack}
     </p>
@@ -466,30 +482,38 @@ function PositionLine(props: {
  */
 const START_SLOTS = 16 * 24
 
-function startOptions(now: number): { value: string; label: string }[] {
-  const out = [{ value: '', label: 'Now' }]
+function startOptions(t: T, locale: Locale, now: number): { value: string; label: string }[] {
+  const out = [{ value: '', label: t('start.now') }]
   const first = new Date(now)
   first.setMinutes(0, 0, 0)
   first.setHours(first.getHours() + 1)
   for (let i = 0; i < START_SLOTS; i++) {
-    const t = new Date(first.getTime() + i * 3600_000)
+    // `slot`, not `t`: the translator is already bound to that name here.
+    const slot = new Date(first.getTime() + i * 3600_000)
     const days = Math.round(
-      (new Date(t).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000
+      (new Date(slot).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000
     )
-    const hh = `${String(t.getHours()).padStart(2, '0')}:00`
+    const hh = `${String(slot.getHours()).padStart(2, '0')}:00`
     const day =
       days === 0
-        ? 'Today'
+        ? t('start.today')
         : days === 1
-          ? 'Tomorrow'
-          : t.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
-    out.push({ value: String(t.getTime()), label: `${day} ${hh}` })
+          ? t('start.tomorrow')
+          : slot.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+    out.push({ value: String(slot.getTime()), label: `${day} ${hh}` })
   }
   return out
 }
 
-function StartRow(props: { track: Track; now: number; onChanged: () => void }) {
-  const options = startOptions(props.now)
+function StartRow(props: {
+  track: Track
+  now: number
+  onChanged: () => void
+  t: T
+  locale: Locale
+}) {
+  const t = props.t
+  const options = startOptions(t, props.locale, props.now)
   // Snap the stored value to the nearest listed slot so the select shows it.
   const current =
     props.track.startAt === null
@@ -507,7 +531,7 @@ function StartRow(props: { track: Track; now: number; onChanged: () => void }) {
 
   return (
     <label class="flex flex-wrap items-center gap-3">
-      <span class="text-sm text-muted">Start time</span>
+      <span class="text-sm text-muted">{t('start.label')}</span>
       <select
         class="field figures font-medium"
         value={current}
@@ -515,7 +539,7 @@ function StartRow(props: { track: Track; now: number; onChanged: () => void }) {
       >
         {current !== '' && !options.some((o) => o.value === current) ? (
           <option value={current} selected>
-            {dayTime(Number(current), props.now)}
+            {dayTime(props.locale, Number(current), props.now)}
           </option>
         ) : null}
         {options.map((o) => (
@@ -536,7 +560,10 @@ function FreshnessRow(props: {
   freshness: Freshness
   online: boolean
   onRefetch: () => void
+  t: T
+  locale: Locale
 }) {
+  const t = props.t
   const old = props.freshness === 'stale' || props.freshness === 'expired'
   return (
     <div class="graticule flex items-center justify-between gap-4 pb-3">
@@ -553,14 +580,16 @@ function FreshnessRow(props: {
               * day is everyone; "7 hours ago" alone cannot be checked against a
               * watch. Each covers the other's failure.
               */}
-            Last fetched <span class="figures">{clock(props.forecast.fetchedAt)}</span>,{' '}
-            {ageText(props.now - props.forecast.fetchedAt)} ago
+            {t('fresh.lastFetched', {
+              time: clockAt(props.locale, props.forecast.fetchedAt),
+              age: ageText(t, props.locale, props.now - props.forecast.fetchedAt)
+            })}
           </>
         ) : (
-          'Never fetched'
+          t('fresh.never')
         )}
-        {props.lastError ? ' · last attempt failed' : ''}
-        {!props.online ? ' · offline' : ''}
+        {props.lastError ? ` · ${t('fresh.attemptFailed')}` : ''}
+        {!props.online ? ` · ${t('fresh.offline')}` : ''}
       </p>
       <button
         type="button"
@@ -568,7 +597,7 @@ function FreshnessRow(props: {
         disabled={props.fetching}
         onClick={props.onRefetch}
       >
-        {props.fetching ? 'Fetching…' : 'Refetch now'}
+        {props.fetching ? t('fresh.refetching') : t('fresh.refetch')}
       </button>
     </div>
   )
@@ -581,7 +610,10 @@ function Timeline(props: {
   anchorMs: number
   now: number
   freshness: Freshness
+  t: T
+  locale: Locale
 }) {
+  const t = props.t
   if (props.remaining.length === 0) return null
   const bySeq: Record<number, Hour[]> = {}
   for (const wf of props.forecast?.waypoints ?? []) bySeq[wf.seq] = wf.hours
@@ -648,7 +680,7 @@ function Timeline(props: {
                   on a narrow phone instead of running off the row. */}
               <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5">
                 <span class="figures min-w-[7ch] shrink-0 text-base font-semibold">
-                  {dayTime(at, props.now)}
+                  {dayTime(props.locale, at, props.now)}
                 </span>
                 <img
                   src={wmoIcon(hour?.code ?? null, isDayHour(at))}
@@ -678,7 +710,8 @@ function Timeline(props: {
                         class="translate-y-0.5"
                       />
                       <span>
-                        {conditionLabel[w.condition]} ({w.detail})
+                        {t(`condition.${w.condition}` as MessageKey)} (
+                        {detailText(t, props.locale, w.detail)})
                       </span>
                       {/*
                        * Only when it is NOT the usual source. Open-Meteo raises
@@ -689,7 +722,9 @@ function Timeline(props: {
                        * computed here rather than forecast by anyone.
                        */}
                       {w.source === 'open-meteo' ? null : (
-                        <span class="font-normal text-muted">{sourceLabel[w.source]}</span>
+                        <span class="font-normal text-muted">
+                          {t(`source.${w.source}` as MessageKey)}
+                        </span>
                       )}
                     </span>
                   ))}
@@ -697,9 +732,16 @@ function Timeline(props: {
               ) : null}
               {met ? (
                 <p class="text-xs text-muted">
-                  MET: {met.tempC === null ? '—' : `${met.tempC.toFixed(0)} °C`}
-                  {met.precipMm !== null ? `, ${met.precipMm.toFixed(1)} mm` : ''}
-                  {disagree ? ' · sources disagree' : ''}
+                  {t('timeline.metLine', {
+                    temp:
+                      met.tempC === null
+                        ? t('timeline.noValue')
+                        : `${num(props.locale, met.tempC)} °C`
+                  })}
+                  {met.precipMm !== null
+                    ? t('timeline.metPrecip', { mm: num(props.locale, met.precipMm, 1) })
+                    : ''}
+                  {disagree ? ` · ${t('timeline.sourcesDisagree')}` : ''}
                 </p>
               ) : null}
             </div>
@@ -766,19 +808,23 @@ function ProfileSegment(props: {
 function CapabilityLine(props: {
   subscribed: boolean
   schedule: { intervalH: number; startH: number; endH: number } | null
+  t: T
 }) {
+  const t = props.t
   const pad = (h: number) => `${String(h).padStart(2, '0')}:00`
   const denied =
     typeof Notification !== 'undefined' && Notification.permission === 'denied'
   return (
     <p class="text-sm text-muted">
-      Warnings appear while wanderbar is open.
+      {t('capability.onWhileOpen')}
       {props.subscribed && props.schedule
-        ? ` Background checks run every ${props.schedule.intervalH} h between ${pad(
-            props.schedule.startH
-          )} and ${pad(props.schedule.endH)}.`
+        ? t('capability.background', {
+            n: props.schedule.intervalH,
+            from: pad(props.schedule.startH),
+            to: pad(props.schedule.endH)
+          })
         : ''}
-      {denied ? ' Enable notifications to be warned in the background.' : ''}
+      {denied ? t('capability.enableToBackground') : ''}
     </p>
   )
 }

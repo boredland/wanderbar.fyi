@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
-import { conditionLabel } from '../lib/icons'
+import { useLocale, type MessageKey } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 import { notifyDelta } from '../lib/notify'
 import { get, set } from '../lib/store'
 import { syncNow } from '../lib/sync'
@@ -23,7 +24,8 @@ const CONDITIONS: Condition[] = [
 
 type NumKey = 'heatC' | 'windKmh' | 'rainMm' | 'windChillC' | 'snowDepthM'
 
-export default function Settings() {
+export default function Settings(props: { locale: Locale }) {
+  const [, msg] = useLocale(props.locale)
   const [t, setT] = useState<Thresholds>(DEFAULT_THRESHOLDS)
 
   useEffect(() => {
@@ -58,7 +60,9 @@ export default function Settings() {
       <span class="text-sm">
         {label}
         {off ? (
-          <span class="block text-xs text-muted">Enable {conditionLabel[owner!]} to set this</span>
+          <span class="block text-xs text-muted">
+            {msg('settings.enableFirst', { condition: msg(`condition.${owner!}` as MessageKey) })}
+          </span>
         ) : null}
       </span>
       <input
@@ -89,11 +93,11 @@ export default function Settings() {
               })
             }
           />
-          <span class="text-base">{conditionLabel[c]}</span>
+          <span class="text-base">{msg(`condition.${c}` as MessageKey)}</span>
         </label>
       ))}
       <label class="flex items-center justify-between gap-4">
-        <span class="text-sm">Fire danger from</span>
+        <span class="text-sm">{msg('settings.fireDangerFrom')}</span>
         <select
           class="field"
           disabled={!t.enabled.fire}
@@ -104,16 +108,16 @@ export default function Settings() {
         >
           {(['moderate', 'high', 'very high', 'extreme'] as FireDanger[]).map((d) => (
             <option key={d} value={d} selected={d === t.fireDanger}>
-              {d}
+              {msg(`fireDanger.${d}` as MessageKey)}
             </option>
           ))}
         </select>
       </label>
-      {num('heatC', 'Heat above (°C)', 20, 45, 0.5)}
-      {num('windChillC', 'Wind chill below (°C)', -60, 5, 1)}
-      {num('snowDepthM', 'Lying snow above (m)', 0.1, 3, 0.1)}
-      {num('windKmh', 'Gusts above (km/h)', 20, 120, 5)}
-      {num('rainMm', 'Rain above (mm/h)', 0.5, 20, 0.5)}
+      {num('heatC', msg('settings.heatAbove'), 20, 45, 0.5)}
+      {num('windChillC', msg('settings.windChillBelow'), -60, 5, 1)}
+      {num('snowDepthM', msg('settings.lyingSnowAbove'), 0.1, 3, 0.1)}
+      {num('windKmh', msg('settings.gustsAbove'), 20, 120, 5)}
+      {num('rainMm', msg('settings.rainAbove'), 0.5, 20, 0.5)}
     </div>
   )
 }

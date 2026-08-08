@@ -23,11 +23,50 @@ export type Condition =
  */
 export type Source = 'open-meteo' | 'met' | 'open-meteo+met' | 'computed'
 
+/**
+ * The measured facts behind a warning, not a sentence about them.
+ *
+ * This used to be a pre-rendered English string, which was wrong twice over.
+ * Warnings are persisted in IndexedDB and re-read on every offline start, so a
+ * baked sentence pins the language the forecast was fetched in; and numbers
+ * were formatted with a hard-coded decimal point, which is not how a German or
+ * French reader writes them. Keeping the values lets the render decide both.
+ *
+ * `diffWarnings` keys on (seq, condition) and never reads this, so changing its
+ * shape cannot affect which notifications fire.
+ */
+export type Detail =
+  | { kind: 'rainRate'; mmPerH: number }
+  | { kind: 'hailPossible' }
+  | { kind: 'gusts'; gustKmh: number }
+  | { kind: 'snowfall'; cm: number }
+  | { kind: 'snowExpected' }
+  | { kind: 'blizzard'; gustKmh: number; tempC: number }
+  | { kind: 'instability'; band: InstabilityBand }
+  | { kind: 'icePrecip'; code: IceCode }
+  | { kind: 'windChill'; feelsC: number; frostbite: FrostbiteBand | null }
+  | { kind: 'lyingSnow'; cm: number }
+  | { kind: 'heat'; tempC: number }
+  | { kind: 'fire'; danger: FireDanger; fwi: number }
+  | { kind: 'sunrise'; atMs: number }
+  | { kind: 'beforeSunrise'; atMs: number }
+  | { kind: 'afterSunset'; atMs: number }
+  | { kind: 'dusk'; atMs: number }
+
+/** CAPE bands; see instabilityBand. */
+export type InstabilityBand = 'expected' | 'weak' | 'strong' | 'violent' | 'extreme'
+
+/** Environment Canada's frostbite exposure bands, in minutes. */
+export type FrostbiteBand = 'under2' | '2to5' | '5to10' | '10to30'
+
+/** The four freezing-precipitation weather codes; see ICE_CODES. */
+export type IceCode = 56 | 57 | 66 | 67
+
 export type Warning = {
   seq: number
   condition: Condition
   forecastHour: number
-  detail: string
+  detail: Detail
   source: Source
 }
 
@@ -89,12 +128,7 @@ const HAIL_CODES: Record<number, true> = { 96: true, 99: true }
  * otherwise pass in silence: 56/57 are the drizzle pair, 66/67 the rain pair.
  * It is the one winter hazard that looks like nothing from indoors.
  */
-const ICE_CODES: Record<number, string> = {
-  56: 'freezing drizzle',
-  57: 'dense freezing drizzle',
-  66: 'freezing rain',
-  67: 'heavy freezing rain'
-}
+const ICE_CODES: Record<number, true> = { 56: true, 57: true, 66: true, 67: true }
 
 /** A warning is about weather where and when the hiker will actually be. */
 const ETA_WINDOW_MS = 3600_000
@@ -132,7 +166,7 @@ export function evaluateWarnings(
             seq: wf.seq,
             condition: 'fire',
             forecastHour: etaMs,
-            detail: `${danger}, FWI ${value.toFixed(0)}`,
+            detail: { kind: 'fire', danger, fwi: value },
             source: 'computed'
           })
         }
@@ -162,7 +196,7 @@ export function evaluateWarnings(
     for (const h of wf.hours) {
       const gap = Math.abs(h.t - etaMs)
       if (gap > ETA_WINDOW_MS) continue
-      const push = (condition: Condition, detail: string, source: Source = 'open-meteo') => {
+      const push = (condition: Condition, detail: Detail, source: Source = 'open-meteo') => {
         if (!thresholds.enabled[condition]) return
         const prev = bestByCondition[condition]
         if (prev && prev.gap <= gap) return
@@ -181,9 +215,9 @@ export function evaluateWarnings(
       const feels = h.apparentC ?? h.tempC
 
       if (precip >= thresholds.rainMm || (code !== null && RAIN_CODES[code] && prob >= 50)) {
-        push('rain', `${precip.toFixed(1)} mm/h`)
+        push('rain', { kind: 'rainRate', mmPerH: precip })
       }
-      if (code !== null && HAIL_CODES[code]) push('hail', 'possible')
+      if (code !== null && HAIL_CODES[code]) push('hail', { kind: 'hailPossible' })
 
       const metThunder = metExtras[wf.seq]?.probabilityOfThunder
       const omThunder = code !== null && THUNDER_CODES[code]
@@ -191,19 +225,23 @@ export function evaluateWarnings(
       if (omThunder || saysThunder) {
         push(
           'thunderstorm',
-          instabilityDetail(h.capeJkg),
+          { kind: 'instability', band: instabilityBand(h.capeJkg) },
           omThunder && saysThunder ? 'open-meteo+met' : saysThunder ? 'met' : 'open-meteo'
         )
       }
-      if (gust >= thresholds.windKmh) push('wind', `gusts ${Math.round(gust)} km/h`)
+      if (gust >= thresholds.windKmh) push('wind', { kind: 'gusts', gustKmh: gust })
 
       const snowing = snow > 0 || (code !== null && SNOW_CODES[code])
-      if (snowing) push('snow', snow > 0 ? `${snow.toFixed(1)} cm` : 'expected')
+      if (snowing) {
+        push('snow', snow > 0 ? { kind: 'snowfall', cm: snow } : { kind: 'snowExpected' })
+      }
       if (snowing && gust >= 40 && temp !== null && temp <= 0) {
-        push('blizzard', `gusts ${Math.round(gust)} km/h at ${temp.toFixed(0)} °C`)
+        push('blizzard', { kind: 'blizzard', gustKmh: gust, tempC: temp })
       }
 
-      if (code !== null && ICE_CODES[code]) push('ice', ICE_CODES[code])
+      if (code !== null && ICE_CODES[code]) {
+        push('ice', { kind: 'icePrecip', code: code as IceCode })
+      }
 
       // Wind chill is computed rather than taken from apparent_temperature:
       // that variable also carries humidity and radiation, and measured against
@@ -211,17 +249,17 @@ export function evaluateWarnings(
       // the wrong direction to be wrong about frostbite.
       const chill = windChillC(temp, h.windKmh)
       if (chill !== null && chill <= thresholds.windChillC) {
-        push('coldwind', `feels like ${chill.toFixed(0)} °C${frostbiteDetail(chill)}`)
+        push('coldwind', { kind: 'windChill', feelsC: chill, frostbite: frostbiteBand(chill) })
       }
 
       // Lying snow, not falling snow: the hazard is the walking, not the sky.
       const lying = h.snowDepthM
       if (lying !== null && lying >= thresholds.snowDepthM) {
-        push('deepsnow', `${Math.round(lying * 100)} cm lying`)
+        push('deepsnow', { kind: 'lyingSnow', cm: lying * 100 })
       }
 
       const hot = Math.max(temp ?? -Infinity, feels ?? -Infinity)
-      if (Number.isFinite(hot) && hot >= thresholds.heatC) push('heat', `${hot.toFixed(1)} °C`)
+      if (Number.isFinite(hot) && hot >= thresholds.heatC) push('heat', { kind: 'heat', tempC: hot })
     }
 
     for (const picked of Object.values(bestByCondition)) {
@@ -251,12 +289,12 @@ export function windChillC(tempC: number | null, windKmh: number | null): number
  * short enough to change what a hiker does; above that the number speaks for
  * itself and a phrase would just pad the row.
  */
-function frostbiteDetail(chillC: number): string {
-  if (chillC <= -55) return ', frostbite under 2 min'
-  if (chillC <= -48) return ', frostbite 2-5 min'
-  if (chillC <= -40) return ', frostbite 5-10 min'
-  if (chillC <= -28) return ', frostbite 10-30 min'
-  return ''
+function frostbiteBand(chillC: number): FrostbiteBand | null {
+  if (chillC <= -55) return 'under2'
+  if (chillC <= -48) return '2to5'
+  if (chillC <= -40) return '5to10'
+  if (chillC <= -28) return '10to30'
+  return null
 }
 
 /** Civil twilight is roughly 30 min either side of the sun crossing. */
@@ -267,7 +305,7 @@ const TWILIGHT_MS = 30 * 60_000
  * the matching day, else null. Uses the day whose sun times bracket the time
  * most closely, so a multi-day track is judged against the right date.
  */
-function darknessAt(sun: SunDay[], atMs: number): string | null {
+function darknessAt(sun: SunDay[], atMs: number): Detail | null {
   if (sun.length === 0) return null
   let best = sun[0]
   let bestGap = Infinity
@@ -281,16 +319,13 @@ function darknessAt(sun: SunDay[], atMs: number): string | null {
   }
   if (!Number.isFinite(best.sunriseMs) || !Number.isFinite(best.sunsetMs)) return null
 
-  const hhmm = (ms: number) =>
-    new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-
   // "Darkness (in the dark)" says nothing; give the boundary that matters.
-  if (atMs > best.sunsetMs + TWILIGHT_MS) return `sunrise ${hhmm(best.sunriseMs)}`
-  if (atMs < best.sunriseMs - TWILIGHT_MS) return `sunrise ${hhmm(best.sunriseMs)}`
-  if (atMs < best.sunriseMs) return `before sunrise ${hhmm(best.sunriseMs)}`
-  if (atMs > best.sunsetMs) return `after sunset ${hhmm(best.sunsetMs)}`
+  if (atMs > best.sunsetMs + TWILIGHT_MS) return { kind: 'sunrise', atMs: best.sunriseMs }
+  if (atMs < best.sunriseMs - TWILIGHT_MS) return { kind: 'sunrise', atMs: best.sunriseMs }
+  if (atMs < best.sunriseMs) return { kind: 'beforeSunrise', atMs: best.sunriseMs }
+  if (atMs > best.sunsetMs) return { kind: 'afterSunset', atMs: best.sunsetMs }
   // Approaching dusk is the case that catches people out on a descent.
-  if (best.sunsetMs - atMs <= TWILIGHT_MS) return `dusk, sunset ${hhmm(best.sunsetMs)}`
+  if (best.sunsetMs - atMs <= TWILIGHT_MS) return { kind: 'dusk', atMs: best.sunsetMs }
   return null
 }
 
@@ -300,13 +335,13 @@ function darknessAt(sun: SunDay[], atMs: number): string | null {
  * triggers a warning on its own; it only describes how violent a storm that
  * does fire would be. Bands follow standard convective forecasting practice.
  */
-function instabilityDetail(capeJkg: number | null): string {
+function instabilityBand(capeJkg: number | null): InstabilityBand {
   if (capeJkg === null) return 'expected'
   if (capeJkg < 300) return 'expected'
-  if (capeJkg < 1000) return 'weak updrafts'
-  if (capeJkg < 2500) return 'strong updrafts'
-  if (capeJkg < 4000) return 'violent updrafts'
-  return 'extreme updrafts'
+  if (capeJkg < 1000) return 'weak'
+  if (capeJkg < 2500) return 'strong'
+  if (capeJkg < 4000) return 'violent'
+  return 'extreme'
 }
 
 export type Delta = { worsened: Warning[]; cleared: Warning[] }

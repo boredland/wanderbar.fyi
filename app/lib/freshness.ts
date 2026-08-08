@@ -30,23 +30,6 @@ export function freshnessOf(fetchedAt: number | null, now: number): Freshness {
   return 'fresh'
 }
 
-const MINUTE = 60_000
-const HOUR = 3600_000
-const DAY = 86_400_000
-
-const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'}`
-
-/**
- * Age as a bare duration, so callers compose "3 hours old" or "3 hours ago".
- *
- * Coarse on purpose: the reader has to decide whether to trust a forecast, and
- * "7 hours" carries that decision where "6 h 51 min" invites arithmetic. Two
- * days are still counted in hours, because "2 days" past midnight reads as a
- * different date rather than a long night.
- */
-export function ageText(ms: number): string {
-  if (ms < MINUTE) return 'under a minute'
-  if (ms < HOUR) return plural(Math.floor(ms / MINUTE), 'minute')
-  if (ms < 2 * DAY) return plural(Math.floor(ms / HOUR), 'hour')
-  return plural(Math.floor(ms / DAY), 'day')
-}
+export const MINUTE_MS = 60_000
+export const HOUR_MS = 3600_000
+export const DAY_MS = 86_400_000

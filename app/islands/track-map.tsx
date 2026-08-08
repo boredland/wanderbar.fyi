@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'hono/jsx'
 import { conditionIconHtml } from '../lib/condition-icon'
-import { conditionLabel, isDayHour, sourceLabel, wmoIcon } from '../lib/icons'
+import { detailText, translator, type MessageKey, type T } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
+import { isDayHour, wmoIcon } from '../lib/icons'
 import type { Forecast } from '../lib/store'
 import type { Waypoint } from '../lib/track'
 import type { Warning } from '../lib/warnings'
@@ -26,9 +28,16 @@ type Props = {
   forecast: Forecast | null
   anchorMs: number
   online: boolean
+  locale: Locale
 }
 
 export default function TrackMap(props: Props) {
+  /*
+   * Not useLocale: Leaflet builds marker popups as raw HTML strings inside an
+   * effect, outside the render pass, so the translator has to be a plain value
+   * the effect can close over rather than hook state.
+   */
+  const t: T = translator(props.locale)
   const el = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<unknown>(null)
 
@@ -106,7 +115,10 @@ export default function TrackMap(props: Props) {
           )}" width="28" height="28" alt="">${badge}</div>`
         })
 
-        const time = new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const time = new Date(at).toLocaleTimeString(props.locale, {
+          hour: '2-digit',
+          minute: '2-digit'
+        })
         const lines = [
           `<strong>${time}</strong> · km ${(wp.cumDistM / 1000).toFixed(1)}`,
           hour?.tempC !== null && hour !== null ? `${hour.tempC.toFixed(0)} °C` : null,
@@ -115,8 +127,8 @@ export default function TrackMap(props: Props) {
           // usual one, so the popup does not repeat "Open-Meteo" on every pin.
           ...ws.map(
             (w) =>
-              `${conditionLabel[w.condition]} (${w.detail})` +
-              (w.source === 'open-meteo' ? '' : ` — ${sourceLabel[w.source]}`)
+              `${t(`condition.${w.condition}` as MessageKey)} (${detailText(t, props.locale, w.detail)})` +
+              (w.source === 'open-meteo' ? '' : ` — ${t(`source.${w.source}` as MessageKey)}`)
           )
         ].filter(Boolean)
 
@@ -132,7 +144,7 @@ export default function TrackMap(props: Props) {
       if (here) {
         L.circleMarker([here.lat, here.lon], { radius: 7, color: AHEAD, fillOpacity: 1 })
           .addTo(map)
-          .bindPopup('Estimated position')
+          .bindPopup(t('map.here'))
       }
 
       const [minLat, minLon, maxLat, maxLon] = props.bbox
@@ -150,12 +162,12 @@ export default function TrackMap(props: Props) {
       created?.remove()
       mapRef.current = null
     }
-  }, [props.simplified, props.currentSeq, props.forecast])
+  }, [props.simplified, props.currentSeq, props.forecast, props.locale])
 
   if (props.simplified.length < 2) {
     return (
       <div class="h-80 w-full rounded-[10px] border border-line bg-raised p-4 text-muted">
-        Track too short to map.
+        {t('map.tooShort')}
       </div>
     )
   }
@@ -172,8 +184,7 @@ export default function TrackMap(props: Props) {
         */}
       {!props.online ? (
         <p class="text-xs text-muted">
-          No connection, so the map background cannot load. The route and its markers are
-          drawn from your device.
+          {t('map.offline')}
         </p>
       ) : null}
       <div

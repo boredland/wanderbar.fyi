@@ -1,34 +1,43 @@
 import { useState } from 'hono/jsx'
+import { useLocale, type MessageKey } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 import { ingestGpx } from '../lib/ingest'
 import { get } from '../lib/store'
 import { DEFAULT_PROFILE, DEFAULT_REST, PROFILES, REST_FACTORS, type ProfileId, type RestId } from '../lib/track'
 
 /** Whole-hour slots over Open-Meteo's 16-day range; see StartRow in track-view. */
-function startOptions(now: number) {
-  const out = [{ value: '', label: 'Now' }]
+function startOptions(
+  now: number,
+  locale: Locale,
+  nowLabel: string,
+  todayLabel: string,
+  tomorrowLabel: string
+) {
+  const out = [{ value: '', label: nowLabel }]
   const first = new Date(now)
   first.setMinutes(0, 0, 0)
   first.setHours(first.getHours() + 1)
   for (let i = 0; i < 16 * 24; i++) {
-    const t = new Date(first.getTime() + i * 3600_000)
+    const slot = new Date(first.getTime() + i * 3600_000)
     const days = Math.round(
-      (new Date(t).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000
+      (new Date(slot).setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86400_000
     )
     const day =
       days === 0
-        ? 'Today'
+        ? todayLabel
         : days === 1
-          ? 'Tomorrow'
-          : t.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })
+          ? tomorrowLabel
+          : slot.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
     out.push({
-      value: String(t.getTime()),
-      label: `${day} ${String(t.getHours()).padStart(2, '0')}:00`
+      value: String(slot.getTime()),
+      label: `${day} ${String(slot.getHours()).padStart(2, '0')}:00`
     })
   }
   return out
 }
 
-export default function Upload(props: { shareError?: string }) {
+export default function Upload(props: { shareError?: string; locale: Locale }) {
+  const [locale, t] = useLocale(props.locale)
   const [error, setError] = useState<string | null>(props.shareError ?? null)
   const [busy, setBusy] = useState(false)
 
@@ -38,7 +47,7 @@ export default function Upload(props: { shareError?: string }) {
     const data = new FormData(form)
     const file = data.get('gpx')
     if (!(file instanceof File) || file.size === 0) {
-      setError('Choose a .gpx file first.')
+      setError(t('upload.chooseFirst'))
       return
     }
     setBusy(true)
@@ -52,10 +61,10 @@ export default function Upload(props: { shareError?: string }) {
         rest: (String(data.get('rest')) as RestId) || DEFAULT_REST,
         startAt: data.get('startAt') ? Number(data.get('startAt')) : null
       })
-      if (!result.ok) setError(result.error)
+      if (!result.ok) setError(t(result.error))
       else dispatchEvent(new Event('wanderbar:changed'))
     } catch {
-      setError('Could not read that file.')
+      setError(t('upload.unreadable'))
     } finally {
       setBusy(false)
     }
@@ -64,7 +73,7 @@ export default function Upload(props: { shareError?: string }) {
   return (
     <form class="flex flex-col gap-4" onSubmit={onSubmit}>
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">GPX track</span>
+        <span class="text-sm text-muted">{t('upload.file')}</span>
         <input
           type="file"
           name="gpx"
@@ -74,7 +83,7 @@ export default function Upload(props: { shareError?: string }) {
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">Name (optional)</span>
+        <span class="text-sm text-muted">{t('upload.name')}</span>
         <input
           type="text"
           name="name"
@@ -82,12 +91,18 @@ export default function Upload(props: { shareError?: string }) {
         />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">Start</span>
+        <span class="text-sm text-muted">{t('upload.start')}</span>
         <select
           name="startAt"
           class="field figures"
         >
-          {startOptions(Date.now()).map((o) => (
+          {startOptions(
+            Date.now(),
+            locale,
+            t('start.now'),
+            t('start.today'),
+            t('start.tomorrow')
+          ).map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -95,21 +110,21 @@ export default function Upload(props: { shareError?: string }) {
         </select>
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">Pace profile</span>
+        <span class="text-sm text-muted">{t('upload.profile')}</span>
         <select name="profile" class="field">
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
             <option key={id} value={id} selected={id === DEFAULT_PROFILE}>
-              {PROFILES[id].label}
+              {t(`profile.${id}` as MessageKey)}
             </option>
           ))}
         </select>
       </label>
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">Breaks</span>
+        <span class="text-sm text-muted">{t('upload.breaks')}</span>
         <select name="rest" class="field">
           {(Object.keys(REST_FACTORS) as RestId[]).map((id) => (
             <option key={id} value={id} selected={id === DEFAULT_REST}>
-              {REST_FACTORS[id].label}
+              {t(`rest.${id}` as MessageKey)}
             </option>
           ))}
         </select>
@@ -119,7 +134,7 @@ export default function Upload(props: { shareError?: string }) {
         class="btn btn-primary"
         disabled={busy}
       >
-        {busy ? 'Adding…' : 'Add track'}
+        {busy ? t('upload.adding') : t('upload.submit')}
       </button>
       {error ? <p class="text-sm text-warn">{error}</p> : null}
     </form>

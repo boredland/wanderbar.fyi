@@ -1,4 +1,5 @@
 import type { Bulletin } from './avalanche'
+import type { Locale } from './i18n/locale'
 import { DEFAULT_SCHEDULE, type Schedule } from './schedule'
 import { DEFAULT_REST, type ProfileId, type RestId, type Waypoint } from './track'
 import { DEFAULT_THRESHOLDS, type Thresholds, type Warning } from './warnings'
@@ -63,6 +64,16 @@ export type Stored = {
   forecast: Forecast | null
   lastFetchError: { at: number; message: string } | null
   vapidPublicKey: string | null
+  /**
+   * The reader's chosen language, or null while they have not chosen one.
+   *
+   * Null rather than 'en' so a first visit can follow Accept-Language without
+   * that guess ever looking like a decision the reader made: the moment they
+   * pick one it is stored, and from then on it outranks both the header and
+   * the path. The service worker reads this for notification text, which is
+   * the reason it lives here and not only in the URL.
+   */
+  locale: Locale | null
 }
 
 const DB_NAME = 'wanderbar'
@@ -76,7 +87,8 @@ const DEFAULTS: Stored = {
   schedule: DEFAULT_SCHEDULE,
   forecast: null,
   lastFetchError: null,
-  vapidPublicKey: null
+  vapidPublicKey: null,
+  locale: null
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -139,7 +151,7 @@ export async function set<K extends keyof Stored>(k: K, v: Stored[K]): Promise<v
   await tx('readwrite', (s) => s.put(v, k))
 }
 
-/** Keeps thresholds and schedule: they are preferences, not track data. */
+/** Keeps thresholds, schedule and locale: preferences, not track data. */
 export async function clearTrack(): Promise<void> {
   await set('track', null)
   await set('fix', null)

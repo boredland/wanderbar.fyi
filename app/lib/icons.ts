@@ -1,4 +1,3 @@
-import type { Condition, Source } from './warnings'
 
 /** MET bases that ship _day/_night variants; the rest 404 with a suffix. */
 const DAY_VARIANT: Record<string, true> = {
@@ -86,21 +85,6 @@ export function isDayHour(ms: number): boolean {
   return h >= 6 && h < 20
 }
 
-export const conditionLabel: Record<Condition, string> = {
-  rain: 'Rain',
-  hail: 'Hail',
-  wind: 'Heavy wind',
-  snow: 'Snow',
-  heat: 'Extreme heat',
-  blizzard: 'Blizzard',
-  thunderstorm: 'Thunderstorm',
-  darkness: 'Darkness',
-  fire: 'Fire risk',
-  ice: 'Ice',
-  coldwind: 'Wind chill',
-  deepsnow: 'Deep snow'
-}
-
 /** The 41 base names present in public/wx (83 files incl. day/night variants). */
 const KNOWN_BASES: Record<string, true> = {
   clearsky: true,
@@ -144,15 +128,4 @@ const KNOWN_BASES: Record<string, true> = {
   snowandthunder: true,
   snowshowers: true,
   snowshowersandthunder: true
-}
-
-/**
- * How a source is named in the UI. Short enough to sit inside a warning row
- * without wrapping it, and spelled the way the provider spells itself.
- */
-export const sourceLabel: Record<Source, string> = {
-  'open-meteo': 'Open-Meteo',
-  met: 'MET',
-  'open-meteo+met': 'Open-Meteo + MET',
-  computed: 'computed here'
 }

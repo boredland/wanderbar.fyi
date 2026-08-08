@@ -13,7 +13,7 @@ declare const self: ServiceWorkerGlobalScope
 const CACHE = 'wanderbar-v1'
 
 /**
- * The document, cached so the app can start without a network.
+ * The documents, cached so the app can start without a network.
  *
  * The forecast itself has never come from HTTP — it lives in IndexedDB and is
  * stamped with `fetchedAt` — so caching the shell changes nothing about how old
@@ -25,8 +25,24 @@ const CACHE = 'wanderbar-v1'
  * The bargain is that the app now looks alive offline, which is exactly why
  * `lib/freshness.ts` exists and why the offline path leads with an age notice
  * rather than a footnote.
+ *
+ * One entry per language, since each is a separately rendered URL.
  */
-const SHELL = '/'
+const SHELLS: Record<string, true> = { '/': true, '/de': true, '/fr': true }
+
+/**
+ * Which cached document answers a navigation.
+ *
+ * Each language is its own URL and its own cached shell, so an offline start
+ * must fall back to the shell for the language being asked for rather than
+ * always handing back the English one. Anything unrecognised falls back to the
+ * root, which is what the language negotiation does online too.
+ */
+function shellFor(pathname: string): string {
+  const [, first] = pathname.split('/')
+  const candidate = `/${first}`
+  return SHELLS[candidate] ? candidate : '/'
+}
 
 /** Immutable by construction: every one of these carries a content hash. */
 const isHashedAsset = (p: string) => p.startsWith('/static/')
@@ -116,12 +132,13 @@ self.addEventListener('fetch', (e) => {
  */
 async function navigateWithFallback(req: Request): Promise<Response> {
   const cache = await caches.open(CACHE)
+  const shell = shellFor(new URL(req.url).pathname)
   try {
     const res = await fetch(req)
-    if (res.ok) cache.put(SHELL, res.clone())
+    if (res.ok) cache.put(shell, res.clone())
     return res
   } catch (err) {
-    const hit = await cache.match(SHELL)
+    const hit = await cache.match(shell)
     if (hit) return hit
     throw err
   }

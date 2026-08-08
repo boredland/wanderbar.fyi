@@ -1,10 +1,13 @@
 import { useState } from 'hono/jsx'
+import { useLocale } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 import { notifyDelta } from '../lib/notify'
 import { get, set } from '../lib/store'
 import { syncNow } from '../lib/sync'
 import { snapToTrack } from '../lib/track'
 
-export default function PositionButton() {
+export default function PositionButton(props: { locale: Locale }) {
+  const [, t] = useLocale(props.locale)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -29,7 +32,7 @@ export default function PositionButton() {
             snappedSeq: snapped.seq,
             snappedDistM: snapped.distM
           })
-          if (snapped.distM > 5000) setMessage('You appear to be >5 km off this track.')
+          if (snapped.distM > 5000) setMessage(t('position.farOff'))
           const kmBySeq: Record<number, number> = {}
           for (const w of track.waypoints) kmBySeq[w.seq] = w.cumDistM / 1000
           try {
@@ -44,7 +47,7 @@ export default function PositionButton() {
       },
       () => {
         setBusy(false)
-        setMessage('Position unavailable, using planned pace.')
+        setMessage(t('position.unavailable'))
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )
@@ -58,7 +61,7 @@ export default function PositionButton() {
         disabled={busy}
         onClick={locate}
       >
-        {busy ? 'Locating…' : 'Update my position'}
+        {busy ? t('position.locating') : t('position.update')}
       </button>
       {message ? <p class="text-sm text-muted">{message}</p> : null}
     </div>

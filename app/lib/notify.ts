@@ -1,4 +1,6 @@
-import { conditionLabel } from './icons'
+import { get } from './store'
+import { clockAt, detailText, plural, translator, type MessageKey, type T } from './i18n'
+import { DEFAULT_LOCALE, type Locale } from './i18n/locale'
 import type { Delta, Warning } from './warnings'
 
 const TAG = 'wanderbar-wx'
@@ -10,13 +12,14 @@ export async function requestPermission(): Promise<NotificationPermission> {
   return Notification.requestPermission()
 }
 
-const clock = (ms: number) =>
-  new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-
-function line(w: Warning, kmBySeq: Record<number, number>): string {
+function line(t: T, locale: Locale, w: Warning, kmBySeq: Record<number, number>): string {
   const km = kmBySeq[w.seq]
-  const where = km === undefined ? `point ${w.seq}` : `km ${km.toFixed(1)}`
-  return `${clock(w.forecastHour)} ${where}: ${conditionLabel[w.condition]} (${w.detail})`
+  const where =
+    km === undefined
+      ? t('notify.atPoint', { seq: w.seq })
+      : t('notify.atKm', { km: km.toFixed(1) })
+  const label = t(`condition.${w.condition}` as MessageKey)
+  return `${clockAt(locale, w.forecastHour)} ${where}: ${label} (${detailText(t, locale, w.detail)})`
 }
 
 /**
@@ -45,17 +48,24 @@ export async function notifyDelta(
 
   const reg = await navigator.serviceWorker.ready
 
+  // Read from IndexedDB rather than taken as an argument: this also runs from
+  // the service worker on a background push, where there is no page to ask.
+  const locale = (await get('locale')) ?? DEFAULT_LOCALE
+  const t = translator(locale)
+
   let title: string
   const body: string[] = []
   if (delta.worsened.length > 0) {
-    title = 'Un-wanderbar weather ahead'
-    for (const w of delta.worsened.slice(0, 3)) body.push(line(w, kmBySeq))
-    if (delta.worsened.length > 3) body.push(`+${delta.worsened.length - 3} more`)
-    if (delta.cleared.length > 0) body.push(`… and ${delta.cleared.length} warnings lifted`)
+    title = t('notify.worsened')
+    for (const w of delta.worsened.slice(0, 3)) body.push(line(t, locale, w, kmBySeq))
+    if (delta.worsened.length > 3) body.push(t('notify.more', { n: delta.worsened.length - 3 }))
+    if (delta.cleared.length > 0) {
+      body.push(plural(t, locale, 'notify.lifted', delta.cleared.length))
+    }
   } else {
-    title = 'Weather is clearing'
-    for (const w of delta.cleared.slice(0, 3)) body.push(line(w, kmBySeq))
-    if (delta.cleared.length > 3) body.push(`+${delta.cleared.length - 3} more`)
+    title = t('notify.clearing')
+    for (const w of delta.cleared.slice(0, 3)) body.push(line(t, locale, w, kmBySeq))
+    if (delta.cleared.length > 3) body.push(t('notify.more', { n: delta.cleared.length - 3 }))
   }
 
   // One fixed tag so a newer notification replaces rather than stacks.

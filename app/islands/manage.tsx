@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
+import { useLocale, type MessageKey } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 import { clearNotifications, notifyDelta } from '../lib/notify'
 import { clearTrack, get, set, type Track } from '../lib/store'
 import { syncNow } from '../lib/sync'
@@ -15,7 +17,8 @@ import { parseGpx } from '../lib/gpx'
 const changed = () => dispatchEvent(new Event('wanderbar:changed'))
 
 
-export default function Manage() {
+export default function Manage(props: { locale: Locale }) {
+  const [, t] = useLocale(props.locale)
   const [track, setTrack] = useState<Track | null>(null)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -74,7 +77,7 @@ export default function Manage() {
   }
 
   const remove = async () => {
-    if (!confirm(`Delete “${track.name}”?`)) return
+    if (!confirm(t('manage.confirmDelete', { name: track.name }))) return
     await clearTrack()
     await clearNotifications()
     // A schedule with no track would wake the app to sync nothing.
@@ -90,7 +93,7 @@ export default function Manage() {
     <div class="flex flex-col gap-4">
       <label class="flex flex-col gap-2">
         <span class="text-sm text-muted">
-          {track.nameSource === 'user' ? 'Name' : 'Name this hike'}
+          {track.nameSource === 'user' ? t('manage.name') : t('manage.nameThis')}
         </span>
         <div class="flex gap-2">
           <input
@@ -104,13 +107,13 @@ export default function Manage() {
             class="btn"
             onClick={saveName}
           >
-            Save
+            {t('manage.save')}
           </button>
         </div>
       </label>
 
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">Pace profile</span>
+        <span class="text-sm text-muted">{t('upload.profile')}</span>
         <select
           class="field"
           disabled={busy}
@@ -121,14 +124,14 @@ export default function Manage() {
         >
           {(Object.keys(PROFILES) as ProfileId[]).map((id) => (
             <option key={id} value={id} selected={id === track.profile}>
-              {PROFILES[id].label}
+              {t(`profile.${id}` as MessageKey)}
             </option>
           ))}
         </select>
       </label>
 
       <label class="flex flex-col gap-2">
-        <span class="text-sm text-muted">Breaks</span>
+        <span class="text-sm text-muted">{t('upload.breaks')}</span>
         <select
           class="field"
           disabled={busy}
@@ -139,13 +142,11 @@ export default function Manage() {
         >
           {(Object.keys(REST_FACTORS) as RestId[]).map((id) => (
             <option key={id} value={id} selected={id === track.rest}>
-              {REST_FACTORS[id].label}
+              {t(`rest.${id}` as MessageKey)}
             </option>
           ))}
         </select>
-        <span class="text-xs text-muted">
-          The pace standards count moving time only.
-        </span>
+        <span class="text-xs text-muted">{t('rest.movingTimeOnly')}</span>
       </label>
 
       <button
@@ -153,7 +154,7 @@ export default function Manage() {
         class="btn btn-danger"
         onClick={remove}
       >
-        Delete this track
+        {t('manage.delete')}
       </button>
     </div>
   )

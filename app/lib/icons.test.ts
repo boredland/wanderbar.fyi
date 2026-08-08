@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { conditionLabel, metIcon, wmoIcon } from './icons'
+import { metIcon, wmoIcon } from './icons'
+import { translator, type MessageKey } from './i18n'
+import { LOCALES } from './i18n/locale'
 import type { Condition } from './warnings'
 
 const WX_DIR = path.resolve(__dirname, '../../public/wx')
@@ -65,8 +67,11 @@ describe('metIcon', () => {
 })
 
 describe('condition copy', () => {
-  it('labels and glyphs every condition, so severity is never colour-only', () => {
+  it('labels every condition in every language, so severity is never colour-only', () => {
     const all: Condition[] = ['rain', 'hail', 'wind', 'snow', 'heat', 'blizzard', 'thunderstorm']
-    for (const c of all) expect(conditionLabel[c]).toBeTruthy()
+    for (const locale of LOCALES) {
+      const t = translator(locale)
+      for (const c of all) expect(t(`condition.${c}` as MessageKey), `${locale}/${c}`).toBeTruthy()
+    }
   })
 })

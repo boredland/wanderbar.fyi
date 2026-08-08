@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
+import { useLocale } from '../lib/i18n'
+import type { Locale } from '../lib/i18n/locale'
 import { requestPermission } from '../lib/notify'
 import { DEFAULT_SCHEDULE, type Schedule } from '../lib/schedule'
 import { get, set } from '../lib/store'
@@ -15,7 +17,8 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return out
 }
 
-export default function ScheduleSettings(props: { vapidPublicKey: string }) {
+export default function ScheduleSettings(props: { vapidPublicKey: string; locale: Locale }) {
+  const [locale, t] = useLocale(props.locale)
   const [s, setS] = useState<Schedule>(DEFAULT_SCHEDULE)
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -32,7 +35,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
     await set('schedule', next)
     if (!next.enabled) {
       await fetch('/api/wake', { method: 'DELETE' })
-      setStatus('Background checks are off.')
+      setStatus(t('schedule.off'))
       dispatchEvent(new Event('wanderbar:changed'))
       return
     }
@@ -56,8 +59,8 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
     const body = (await res.json()) as { nextWakeMs?: number; error?: string }
     setStatus(
       body.nextWakeMs
-        ? `Next check ${new Date(body.nextWakeMs).toLocaleString()}.`
-        : 'Could not save that schedule.'
+        ? t('schedule.nextCheck', { time: new Date(body.nextWakeMs).toLocaleString(locale) })
+        : t('schedule.saveFailed')
     )
     dispatchEvent(new Event('wanderbar:changed'))
   }, [])
@@ -68,7 +71,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
     try {
       const permission = await requestPermission()
       if (permission !== 'granted') {
-        setStatus('Notifications are blocked for this site.')
+        setStatus(t('schedule.blocked'))
         return
       }
       const reg = await navigator.serviceWorker.ready
@@ -98,8 +101,8 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       const body = (await res.json()) as { nextWakeMs?: number }
       setStatus(
         body.nextWakeMs
-          ? `Next check ${new Date(body.nextWakeMs).toLocaleString()}.`
-          : 'Could not save that schedule.'
+          ? t('schedule.nextCheck', { time: new Date(body.nextWakeMs).toLocaleString(locale) })
+          : t('schedule.saveFailed')
       )
       dispatchEvent(new Event('wanderbar:changed'))
     } finally {
@@ -117,11 +120,11 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
           checked={s.enabled}
           onChange={(e) => push({ ...s, enabled: (e.target as HTMLInputElement).checked })}
         />
-        <span class="text-base">Check in the background</span>
+        <span class="text-base">{t('schedule.enable')}</span>
       </label>
 
       <label class="flex items-center justify-between gap-4">
-        <span class="text-sm">Every</span>
+        <span class="text-sm">{t('schedule.every')}</span>
         <select
           class="field figures"
           value={String(s.intervalH)}
@@ -129,14 +132,14 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
         >
           {INTERVALS.map((h) => (
             <option key={h} value={h} selected={h === s.intervalH}>
-              {h} h
+              {t('schedule.hours', { n: h })}
             </option>
           ))}
         </select>
       </label>
 
       <label class="flex items-center justify-between gap-4">
-        <span class="text-sm">From</span>
+        <span class="text-sm">{t('schedule.from')}</span>
         <select
           class="field figures"
           value={String(s.startH)}
@@ -151,7 +154,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       </label>
 
       <label class="flex items-center justify-between gap-4">
-        <span class="text-sm">To</span>
+        <span class="text-sm">{t('schedule.to')}</span>
         <select
           class="field figures"
           value={String(s.endH)}
@@ -166,9 +169,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
       </label>
 
       {invalid ? (
-        <p class="text-sm text-warn">
-          The start hour must come before the end hour.
-        </p>
+        <p class="text-sm text-warn">{t('schedule.invalidRange')}</p>
       ) : null}
 
       <button
@@ -177,7 +178,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string }) {
         disabled={busy}
         onClick={enable}
       >
-        {busy ? 'Enabling…' : 'Enable notifications'}
+        {busy ? t('schedule.enabling') : t('schedule.enableButton')}
       </button>
       {status ? <p class="text-sm text-muted">{status}</p> : null}
     </div>

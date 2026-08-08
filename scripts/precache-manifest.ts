@@ -43,8 +43,14 @@ const fonts = readdirSync(join(ROOT, 'public/fonts'))
   .filter((f) => f.endsWith('.woff2'))
   .map((f) => `/fonts/${f}`)
 
+/*
+ * Every language's document, because each is a separate server-rendered URL and
+ * the offline start has to work in the language the reader actually uses.
+ */
+const shells = ['/', '/de', '/fr']
+
 const urls = [
-  '/',
+  ...shells,
   '/manifest.webmanifest',
   '/icon.svg',
   ...[...hashed].sort(),

@@ -1,3 +1,4 @@
+import type { MessageKey } from './i18n'
 import { clearNotifications } from './notify'
 import { clearTrack, set, type Track } from './store'
 import { syncNow } from './sync'
@@ -15,10 +16,14 @@ import {
 } from './track'
 import { fillElevations } from './weather'
 
-export type IngestResult = { ok: true; track: Track } | { ok: false; error: string }
+export type IngestResult = { ok: true; track: Track } | { ok: false; error: MessageKey }
 
-const SPARSE_ERROR =
-  'This GPX looks like a route, not a recorded track. Please export a track with dense trackpoints (<200 m apart).'
+/**
+ * Errors travel as message keys, not sentences: ingest runs with no locale of
+ * its own (the share receiver calls it too), and the island that shows the
+ * result is the thing that knows which language to render.
+ */
+const SPARSE_ERROR: MessageKey = 'upload.sparse'
 
 export async function ingestGpx(input: {
   xml: string
@@ -33,7 +38,7 @@ export async function ingestGpx(input: {
   try {
     parsed = parseGpx(input.xml)
   } catch {
-    return { ok: false, error: 'Could not parse this file as GPX.' }
+    return { ok: false, error: 'upload.unparseable' }
   }
   const { points, sparse } = parsed
   if (sparse || points.length < 2) return { ok: false, error: SPARSE_ERROR }
