@@ -64,17 +64,24 @@ export const faqEn: FaqEntry[] = [
           It cannot compute a warning, and it never sees where you are.
         </p>
         <p>
-          Two things do leave your device, both to fetch weather. Waypoint coordinates go
-          to <A href="https://open-meteo.com/">Open-Meteo</A> directly, rounded to four
+          Three things do leave your device, all to ask about the weather or what is
+          burning. Waypoint coordinates go to{' '}
+          <A href="https://open-meteo.com/">Open-Meteo</A> directly, rounded to four
           decimals. The cross-check coordinates pass through this site on their way to{' '}
           <A href="https://api.met.no/">MET Norway</A>, because their terms require an
           identifying User-Agent that a browser cannot set. That proxy stores nothing.
+        </p>
+        <p>
+          The third is a box, not a route. To look for active fires, wanderbar sends{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>{' '}
+          only the corners of a rectangle around your track, never the track itself, and
+          it works out which fires are near you here on your device.
         </p>
         <p>Deleting the track, or the browser&rsquo;s site data, removes all of it.</p>
       </>
     ),
     text:
-      'Your track, your position and every forecast are stored only in your browser, and there is no account. The server keeps one push subscription and one schedule, nothing else: it cannot compute a warning and never sees where you are. Two things leave your device, both to fetch weather: waypoint coordinates go to Open-Meteo directly, rounded to four decimals, and the cross-check coordinates pass through this site on the way to MET Norway because their terms require an identifying User-Agent a browser cannot set. That proxy stores nothing. Deleting the track, or the browser site data, removes all of it.'
+      'Your track, your position and every forecast are stored only in your browser, and there is no account. The server keeps one push subscription and one schedule, nothing else: it cannot compute a warning and never sees where you are. Three things leave your device, all to ask about the weather or what is burning: waypoint coordinates go to Open-Meteo directly, rounded to four decimals; the cross-check coordinates pass through this site on the way to MET Norway because their terms require an identifying User-Agent a browser cannot set, and that proxy stores nothing; and to look for active fires wanderbar sends Copernicus EFFIS/GWIS only the corners of a rectangle around your track, never the track itself, working out which fires are near you on your device. Deleting the track, or the browser site data, removes all of it.'
   },
   {
     q: 'How can it check the weather while it is closed?',
@@ -304,11 +311,14 @@ export const faqEn: FaqEntry[] = [
         <A href="https://github.com/boredland/wanderbar.fyi">the code is on GitHub</A>. Map
         tiles are by <A href="https://opentopomap.org">OpenTopoMap</A> from OpenStreetMap
         data, and the weather icons are by{' '}
-        <A href="https://github.com/metno/weathericons">MET Norway</A>.
+        <A href="https://github.com/metno/weathericons">MET Norway</A>. Active fire
+        detections are &copy; European Union, from{' '}
+        <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>,
+        under CC BY 4.0.
       </p>
     ),
     text:
-      'Nothing, and there are no accounts, adverts or trackers. It is open source and the code is on GitHub. Map tiles are by OpenTopoMap from OpenStreetMap data, and the weather icons are by MET Norway.'
+      'Nothing, and there are no accounts, adverts or trackers. It is open source and the code is on GitHub. Map tiles are by OpenTopoMap from OpenStreetMap data, the weather icons are by MET Norway, and the active fire detections are © European Union, from Copernicus EFFIS/GWIS, under CC BY 4.0.'
   }
 ]
 
@@ -352,19 +362,26 @@ export const faqDe: FaqEntry[] = [
           wecken. Eine Warnung kann er damit nicht berechnen, und wo du bist, sieht er nie.
         </p>
         <p>
-          Zwei Dinge verlassen dein Gerät, beide nur fürs Wetterholen. Wegpunkt-Koordinaten
-          gehen direkt zu <A href="https://open-meteo.com/">Open-Meteo</A>, auf vier
-          Dezimalstellen gerundet. Die Koordinaten für den Gegencheck laufen über diese
-          Seite auf dem Weg zu{' '}
-          <A href="https://api.met.no/">MET Norway</A>, weil deren Bedingungen einen
+          Drei Dinge verlassen dein Gerät, alle nur, um nach dem Wetter oder nach Feuer zu
+          fragen. Wegpunkt-Koordinaten gehen direkt zu{' '}
+          <A href="https://open-meteo.com/">Open-Meteo</A>, auf vier Dezimalstellen
+          gerundet. Die Koordinaten für den Gegencheck laufen über diese Seite auf dem Weg
+          zu <A href="https://api.met.no/">MET Norway</A>, weil deren Bedingungen einen
           identifizierenden User-Agent verlangen, den ein Browser nicht setzen kann. Dieser
           Proxy speichert nichts.
+        </p>
+        <p>
+          Das dritte ist ein Rechteck, keine Route. Um nach aktiven Bränden zu suchen,
+          schickt wanderbar an{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>{' '}
+          nur die Ecken eines Rechtecks um deinen Track, nie den Track selbst. Welche
+          Brände in deiner Nähe liegen, rechnet dein Gerät selbst aus.
         </p>
         <p>Wenn du den Track oder die Website-Daten deines Browser&rsquo;s löschst, ist alles weg.</p>
       </>
     ),
     text:
-      'Dein Track, deine Position und jede Vorhersage liegen nur in diesem Browser, und du musst kein Konto anlegen. Der Server speichert genau ein Push-Abo und einen Zeitplan, mehr nicht: Eine Warnung kann er damit nicht berechnen, und wo du bist, sieht er nie. Zwei Dinge verlassen dein Gerät, beide nur fürs Wetterholen: Wegpunkt-Koordinaten gehen direkt zu Open-Meteo, auf vier Dezimalstellen gerundet, und die Koordinaten für den Gegencheck laufen über diese Seite auf dem Weg zu MET Norway, weil deren Bedingungen einen identifizierenden User-Agent verlangen, den ein Browser nicht setzen kann. Dieser Proxy speichert nichts. Wenn du den Track oder die Website-Daten des Browsers löschst, ist alles weg.'
+      'Dein Track, deine Position und jede Vorhersage liegen nur in diesem Browser, und du musst kein Konto anlegen. Der Server speichert genau ein Push-Abo und einen Zeitplan, mehr nicht: Eine Warnung kann er damit nicht berechnen, und wo du bist, sieht er nie. Drei Dinge verlassen dein Gerät, alle nur, um nach dem Wetter oder nach Feuer zu fragen: Wegpunkt-Koordinaten gehen direkt zu Open-Meteo, auf vier Dezimalstellen gerundet; die Koordinaten für den Gegencheck laufen über diese Seite auf dem Weg zu MET Norway, weil deren Bedingungen einen identifizierenden User-Agent verlangen, den ein Browser nicht setzen kann, und dieser Proxy speichert nichts; und um nach aktiven Bränden zu suchen, schickt wanderbar an Copernicus EFFIS/GWIS nur die Ecken eines Rechtecks um deinen Track, nie den Track selbst, und welche Brände in deiner Nähe liegen, rechnet dein Gerät selbst aus. Wenn du den Track oder die Website-Daten des Browsers löschst, ist alles weg.'
   },
   {
     q: 'Wie kann es das Wetter prüfen, wenn es geschlossen ist?',
@@ -600,11 +617,14 @@ export const faqDe: FaqEntry[] = [
         <A href="https://github.com/boredland/wanderbar.fyi">der Code liegt auf GitHub</A>.
         Kartenkacheln sind von <A href="https://opentopomap.org">OpenTopoMap</A> auf Basis
         von OpenStreetMap-Daten, und die Wettersymbole kommen von{' '}
-        <A href="https://github.com/metno/weathericons">MET Norway</A>.
+        <A href="https://github.com/metno/weathericons">MET Norway</A>. Die Daten zu
+        aktiven Bränden sind &copy; Europäische Union, von{' '}
+        <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>,
+        unter CC BY 4.0.
       </p>
     ),
     text:
-      'Nichts, und es gibt keine Konten, keine Werbung und keine Tracker. Es ist Open Source und der Code liegt auf GitHub. Kartenkacheln sind von OpenTopoMap auf Basis von OpenStreetMap-Daten, und die Wettersymbole kommen von MET Norway.'
+      'Nichts, und es gibt keine Konten, keine Werbung und keine Tracker. Es ist Open Source und der Code liegt auf GitHub. Kartenkacheln sind von OpenTopoMap auf Basis von OpenStreetMap-Daten, die Wettersymbole kommen von MET Norway, und die Daten zu aktiven Bränden sind © Europäische Union, von Copernicus EFFIS/GWIS, unter CC BY 4.0.'
   }
 ]
 
@@ -650,19 +670,26 @@ export const faqFr: FaqEntry[] = [
           et il ne voit jamais où tu es.
         </p>
         <p>
-          Deux choses quittent ton appareil, uniquement pour récupérer la météo. Les
-          coordonnées des points passent directement à{' '}
+          Trois choses quittent ton appareil, toutes pour demander la météo ou ce qui
+          brûle. Les coordonnées des points passent directement à{' '}
           <A href="https://open-meteo.com/">Open-Meteo</A>, arrondies à quatre décimales.
           Les coordonnées de contre-vérification passent par ce site avant d&rsquo;aller vers{' '}
           <A href="https://api.met.no/">MET Norway</A>, parce que leurs conditions imposent
           un User-Agent identifiant qu&rsquo;un navigateur ne peut pas définir. Ce proxy ne
           stocke rien.
         </p>
+        <p>
+          La troisième est un rectangle, pas un tracé. Pour chercher les incendies actifs,
+          wanderbar envoie à{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>{' '}
+          seulement les coins d&rsquo;un rectangle autour de ton tracé, jamais le tracé
+          lui-même, et c&rsquo;est ton appareil qui calcule lesquels sont près de toi.
+        </p>
         <p>Supprimer le tracé, ou les données du site du navigateur, supprime tout.</p>
       </>
     ),
     text:
-      "Ton tracé, ta position et chaque prévision sont stockés uniquement dans ton navigateur, et tu n'as aucun compte. Le serveur garde un abonnement push et une planification, rien d'autre : il ne peut pas calculer une alerte et il ne voit jamais où tu es. Deux choses quittent ton appareil, uniquement pour récupérer la météo : les coordonnées des points vont directement à Open-Meteo, arrondies à quatre décimales, et les coordonnées de contre-vérification passent par ce site vers MET Norway parce que leurs conditions imposent un User-Agent identifiant qu'un navigateur ne peut pas définir. Ce proxy ne stocke rien. Supprimer le tracé, ou les données du site du navigateur, supprime tout."
+      "Ton tracé, ta position et chaque prévision sont stockés uniquement dans ton navigateur, et tu n'as aucun compte. Le serveur garde un abonnement push et une planification, rien d'autre : il ne peut pas calculer une alerte et il ne voit jamais où tu es. Trois choses quittent ton appareil, toutes pour demander la météo ou ce qui brûle : les coordonnées des points vont directement à Open-Meteo, arrondies à quatre décimales ; les coordonnées de contre-vérification passent par ce site vers MET Norway parce que leurs conditions imposent un User-Agent identifiant qu'un navigateur ne peut pas définir, et ce proxy ne stocke rien ; et pour chercher les incendies actifs, wanderbar envoie à Copernicus EFFIS/GWIS seulement les coins d'un rectangle autour de ton tracé, jamais le tracé lui-même, et c'est ton appareil qui calcule lesquels sont près de toi. Supprimer le tracé, ou les données du site du navigateur, supprime tout."
   },
   {
     q: "Comment ça vérifie la météo quand c'est fermé ?",
@@ -900,11 +927,14 @@ export const faqFr: FaqEntry[] = [
         <A href="https://github.com/boredland/wanderbar.fyi">le code est sur GitHub</A>. Les
         tuiles de carte viennent de <A href="https://opentopomap.org">OpenTopoMap</A> à
         partir des données OpenStreetMap, et les icônes météo viennent de{' '}
-        <A href="https://github.com/metno/weathericons">MET Norway</A>.
+        <A href="https://github.com/metno/weathericons">MET Norway</A>. Les détections
+        d&rsquo;incendies actifs sont &copy; Union européenne, via{' '}
+        <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>,
+        sous licence CC BY 4.0.
       </p>
     ),
     text:
-      "Rien, et il n'y a ni comptes, ni pub, ni traceurs. C'est open source : le code est sur GitHub. Les tuiles de carte viennent d'OpenTopoMap à partir des données OpenStreetMap, et les icônes météo viennent de MET Norway."
+      "Rien, et il n'y a ni comptes, ni pub, ni traceurs. C'est open source : le code est sur GitHub. Les tuiles de carte viennent d'OpenTopoMap à partir des données OpenStreetMap, les icônes météo viennent de MET Norway, et les détections d'incendies actifs sont © Union européenne, via Copernicus EFFIS/GWIS, sous licence CC BY 4.0."
   }
 ]
 
