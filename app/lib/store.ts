@@ -1,4 +1,5 @@
 import type { Bulletin } from './avalanche'
+import type { Wildfires } from './wildfire'
 import type { Locale } from './i18n/locale'
 import { DEFAULT_SCHEDULE, type Schedule } from './schedule'
 import { DEFAULT_REST, type ProfileId, type RestId, type Waypoint } from './track'
@@ -54,6 +55,13 @@ export type Forecast = {
    * Null only for forecasts stored before the feature existed.
    */
   avalanche: Bulletin | null
+  /**
+   * Fires observed burning near the route, deliberately outside `warnings` for
+   * the same reason as `avalanche`: a satellite detection is an observation,
+   * not a forecast, and its absence means nobody looked rather than nothing
+   * burns. Null only for forecasts stored before the feature existed.
+   */
+  wildfires: Wildfires | null
 }
 
 export type Stored = {

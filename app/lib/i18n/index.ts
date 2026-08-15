@@ -46,12 +46,13 @@ export function translator(locale: Locale): T {
 export function plural(
   t: T,
   locale: Locale,
-  base: 'age.minute' | 'age.hour' | 'age.day' | 'notify.lifted',
-  n: number
+  base: 'age.minute' | 'age.hour' | 'age.day' | 'notify.lifted' | 'wildfire.seen',
+  n: number,
+  vars: Vars = {}
 ): string {
   const rule = new Intl.PluralRules(locale).select(n)
   const key = (rule === 'one' ? `${base}_one` : `${base}_other`) as MessageKey
-  return t(key, { n })
+  return t(key, { ...vars, n })
 }
 
 /**

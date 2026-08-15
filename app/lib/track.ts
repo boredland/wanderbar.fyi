@@ -271,7 +271,10 @@ export function simplifyForMap(points: Pt[], maxPoints = 500): [number, number][
   return out
 }
 
-export function bboxOf(points: Pt[]): [number, number, number, number] {
+/** Bounds only need coordinates, so this serves raw points and waypoints alike. */
+export function bboxOf(
+  points: { lat: number; lon: number }[]
+): [number, number, number, number] {
   let minLat = Infinity
   let minLon = Infinity
   let maxLat = -Infinity

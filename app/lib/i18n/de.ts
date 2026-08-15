@@ -128,6 +128,36 @@ export const de: Messages = {
   'avalanche.body.error':
     'Das kann auch nur eine abgebrochene Verbindung sein. wanderbar hat keine Gefahrenstufe für diese Route, was nicht dasselbe ist wie keine Gefahr.',
 
+  'wildfire.eyebrow': 'Aktive Brände',
+  'wildfire.hide': 'Hinweis zu aktiven Bränden ausblenden',
+  'wildfire.nearest': 'Feuer {km} km von deiner Route entdeckt',
+  'wildfire.nearestUnderKm': 'Feuer weniger als 1 km von deiner Route entdeckt',
+  'wildfire.manyNearby': 'Viele Brände rund um diese Route',
+  'wildfire.truncated':
+    'Es gab mehr Detektionen, als wanderbar auf einmal lesen konnte, deshalb kann es dir nicht sagen, welche die nächstgelegene ist.',
+  'wildfire.seen_one': '{n} Detektion in den letzten {hours} h, gesehen {ago}.',
+  'wildfire.seen_other':
+    '{n} Detektionen in den letzten {hours} h; die nächstgelegene wurde {ago} gesehen.',
+  'wildfire.withinHour': 'in der letzten Stunde',
+  'wildfire.hoursAgo': 'vor {n} h',
+  /*
+   * The satellite's own confidence in the detection, not confidence in the
+   * fire: "Vertrauen" would read as the latter. VIIRS publishes low/nominal/
+   * high, and "nominal" is the sensor's normal case, not a middling warning.
+   */
+  'wildfire.confidence.low': 'geringe Zuverlässigkeit',
+  'wildfire.confidence.nominal': 'normale Zuverlässigkeit',
+  'wildfire.confidence.high': 'hohe Zuverlässigkeit',
+  'wildfire.caveat':
+    'Dort hat ein Satellit Hitze gesehen, nicht dort ist das Feuer jetzt, und wanderbar kann dir nicht sagen, wohin es zieht.',
+  'wildfire.checkYourself': 'Prüfe {link} und den örtlichen Katastrophenschutz.',
+  'wildfire.head.none': 'Keine Brände in der Nähe dieser Route entdeckt',
+  'wildfire.head.error': 'Aktive Brände konnten nicht geprüft werden',
+  'wildfire.body.none':
+    'In den letzten {hours} h hat kein Satellit ein Feuer im Umkreis von 20 km um deine Route entdeckt. Satelliten fliegen nur einige Male am Tag vorbei, und Wolken verdecken Brände: Das ist keine Garantie, dass nichts brennt.',
+  'wildfire.body.error':
+    'Das kann auch nur eine abgebrochene Verbindung sein. wanderbar weiß nicht, ob in der Nähe dieser Route etwas brennt, was nicht dasselbe ist wie: es brennt nichts.',
+
   /*
    * The EAWS danger scale, in its official German wording — not a translation
    * choice. avalanche.report publishes exactly these five words, and a reader

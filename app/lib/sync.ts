@@ -4,6 +4,7 @@ import { get, set } from './store'
 import { estimatePosition, startAnchorMs } from './track'
 import { diffWarnings, evaluateWarnings, type Delta, type MetExtras } from './warnings'
 import { fetchFwiInputs, fetchMet, fetchOpenMeteo, type Hour } from './weather'
+import { fetchWildfires } from './wildfire'
 
 const EMPTY: Delta = { worsened: [], cleared: [] }
 
@@ -68,6 +69,12 @@ export async function syncNow(): Promise<Delta> {
     // as an explicit "unknown", which is what fetchBulletin's states carry.
     const avalanche = await fetchBulletin(remaining)
 
+    // Fires already burning, which the FWI cannot tell you: it forecasts how
+    // readily one would spread, not whether one exists. Also never a `Warning`,
+    // because a satellite that has not passed overhead is not an all-clear.
+    // fetchWildfires resolves rather than throws, so it cannot gate the sync.
+    const wildfires = await fetchWildfires(remaining, now)
+
     const next = evaluateWarnings(
       thresholds,
       waypoints,
@@ -95,7 +102,8 @@ export async function syncNow(): Promise<Delta> {
       metThunder,
       fwiByDate,
       warnings: next,
-      avalanche
+      avalanche,
+      wildfires
     })
     await set('lastFetchError', null)
     return delta

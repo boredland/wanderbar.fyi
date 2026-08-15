@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from 'hono/jsx'
  */
 const PREFIX = 'wanderbar:hidden:'
 
-export type HiddenKey = 'best-effort' | 'avalanche-unknown'
+export type HiddenKey = 'best-effort' | 'avalanche-unknown' | 'wildfire-quiet'
 
 export function useHidden(key: HiddenKey): [boolean, () => void] {
   /*

@@ -134,6 +134,36 @@ export const en = {
   'avalanche.body.error':
     'This may just be a dropped connection. wanderbar has no danger level for this route, which is not the same as no danger.',
 
+  'wildfire.eyebrow': 'Active fires',
+  'wildfire.hide': 'Hide the active-fire notice',
+  'wildfire.nearest': 'Fire detected {km} km from your route',
+  'wildfire.nearestUnderKm': 'Fire detected less than 1 km from your route',
+  'wildfire.manyNearby': 'Many fires burning around this route',
+  'wildfire.truncated':
+    'There were more detections than wanderbar could read at once, so it cannot tell you which is nearest.',
+  'wildfire.seen_one': '{n} detection in the last {hours} h, seen {ago}.',
+  'wildfire.seen_other':
+    '{n} detections in the last {hours} h; the nearest was seen {ago}.',
+  'wildfire.withinHour': 'within the hour',
+  'wildfire.hoursAgo': '{n} h ago',
+  'wildfire.confidence.low': 'low confidence',
+  'wildfire.confidence.nominal': 'nominal confidence',
+  'wildfire.confidence.high': 'high confidence',
+  /*
+   * The distance is to where a satellite saw heat, at one instant. It is not a
+   * clearance, and the fire may have moved since; the people who model spread
+   * are the ones to ask, so every state links to them.
+   */
+  'wildfire.caveat':
+    'That is where a satellite saw heat, not where the fire is now, and wanderbar cannot tell you which way it is moving.',
+  'wildfire.checkYourself': 'Check {link} and local civil protection.',
+  'wildfire.head.none': 'No fires detected near this route',
+  'wildfire.head.error': 'Could not check for active fires',
+  'wildfire.body.none':
+    'No satellite detected a fire within 20 km of your route in the last {hours} h. Satellites pass a few times a day and cloud hides fires, so this is not a guarantee that nothing is burning.',
+  'wildfire.body.error':
+    'This may just be a dropped connection. wanderbar does not know whether anything is burning near this route, which is not the same as nothing burning.',
+
   'danger.1': 'Low',
   'danger.2': 'Moderate',
   'danger.3': 'Considerable',

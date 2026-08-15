@@ -134,6 +134,36 @@ export const fr: Messages = {
   'avalanche.body.error':
     "Ce n'est peut-être qu'une connexion interrompue. wanderbar n'a pas de degré de danger pour cet itinéraire, ce qui n'est pas la même chose qu'une absence de danger.",
 
+  'wildfire.eyebrow': 'Incendies actifs',
+  'wildfire.hide': "Masquer l'avis d'incendie actif",
+  'wildfire.nearest': 'Incendie détecté à {km} km de ton itinéraire',
+  'wildfire.nearestUnderKm': "Incendie détecté à moins d'1 km de ton itinéraire",
+  'wildfire.manyNearby': 'De nombreux incendies autour de cet itinéraire',
+  'wildfire.truncated':
+    "Il y avait plus de détections que wanderbar ne pouvait en lire d'un coup, donc il ne peut pas te dire laquelle est la plus proche.",
+  'wildfire.seen_one': '{n} détection ces dernières {hours} h, vue {ago}.',
+  'wildfire.seen_other':
+    '{n} détections ces dernières {hours} h ; la plus proche a été vue {ago}.',
+  'wildfire.withinHour': "dans la dernière heure",
+  'wildfire.hoursAgo': 'il y a {n} h',
+  /*
+   * The sensor's confidence in its own detection, not confidence about the
+   * fire: "confiance" alone reads as the latter. VIIRS publishes low/nominal/
+   * high, where "nominal" is the sensor's normal case, not a middling warning.
+   */
+  'wildfire.confidence.low': 'fiabilité faible',
+  'wildfire.confidence.nominal': 'fiabilité normale',
+  'wildfire.confidence.high': 'fiabilité élevée',
+  'wildfire.caveat':
+    "C'est là qu'un satellite a vu de la chaleur, pas là où le feu est maintenant, et wanderbar ne peut pas te dire dans quelle direction il va.",
+  'wildfire.checkYourself': 'Consulte {link} et la protection civile locale.',
+  'wildfire.head.none': "Aucun incendie détecté près de cet itinéraire",
+  'wildfire.head.error': "Impossible de vérifier les incendies actifs",
+  'wildfire.body.none':
+    "Aucun satellite n'a détecté d'incendie à moins de 20 km de ton itinéraire ces dernières {hours} h. Les satellites ne passent que quelques fois par jour et les nuages cachent les feux : ce n'est pas une garantie que rien ne brûle.",
+  'wildfire.body.error':
+    "Ce n'est peut-être qu'une connexion interrompue. wanderbar ne sait pas si quelque chose brûle près de cet itinéraire, ce qui n'est pas la même chose que rien ne brûle.",
+
   /*
    * The EAWS danger scale, in its official French wording — not a translation
    * choice. Météo-France's BERA and SLF both publish exactly these five terms,

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'hono/jsx'
 import AvalanchePanel from './avalanche-panel'
+import WildfirePanel from './wildfire-panel'
 import { ConditionIcon } from '../lib/condition-icon'
 import { freshnessOf, type Freshness } from '../lib/freshness'
 import {
@@ -200,6 +201,8 @@ export default function TrackView(props: { locale: Locale }) {
       />
 
       <AvalanchePanel bulletin={forecast?.avalanche ?? null} locale={locale} />
+
+      <WildfirePanel wildfires={forecast?.wildfires ?? null} locale={locale} />
 
       <PositionLine
         track={track}

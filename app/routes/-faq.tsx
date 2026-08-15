@@ -210,6 +210,37 @@ export const faqEn: FaqEntry[] = [
       'It is calculated on your device rather than fetched, because no public service offers a free point forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of Open-Meteo weather history, which gives it drought memory rather than judging today alone. Treat it as an indication and always follow the local fire ban.'
   },
   {
+    q: 'Does it show fires that are already burning?',
+    a: (
+      <>
+        <p>
+          Yes, separately from fire danger, because they are different claims.
+          The danger index says how readily a fire would spread here if one
+          started; this says one already has. wanderbar asks{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>{' '}
+          for satellite fire detections within 20 km of your route over the last
+          48 hours, and shows how far away the nearest one is and when it was
+          seen.
+        </p>
+        <p>
+          A detection is a pixel that was hot when a satellite passed over. It is
+          not a fire perimeter, and nothing in it says which way the fire is
+          moving, so wanderbar reports the distance and stops there.
+        </p>
+        <p>
+          When nothing is found, it says that rather than staying quiet, and it
+          says it is not a guarantee. Satellites pass a few times a day, cloud
+          and canopy hide fires, and small ones are missed. &ldquo;Nobody has
+          seen a fire here&rdquo; is not the same sentence as &ldquo;there is no
+          fire here&rdquo;, and if the service cannot be reached at all
+          wanderbar says that too.
+        </p>
+      </>
+    ),
+    text:
+      'Yes, separately from fire danger, because they are different claims: the danger index says how readily a fire would spread here if one started, while this says one already has. wanderbar asks Copernicus EFFIS/GWIS for satellite fire detections within 20 km of your route over the last 48 hours and shows how far away the nearest one is and when it was seen. A detection is a pixel that was hot when a satellite passed over, not a fire perimeter, and nothing in it says which way the fire is moving, so wanderbar reports the distance and stops there. When nothing is found it says so rather than staying quiet, and says it is not a guarantee: satellites pass a few times a day, cloud and canopy hide fires, and small ones are missed. "Nobody has seen a fire here" is not the same sentence as "there is no fire here", and if the service cannot be reached at all wanderbar says that too.'
+  },
+  {
     q: 'Does it handle winter hiking?',
     a: (
       <>
@@ -475,6 +506,39 @@ export const faqDe: FaqEntry[] = [
       'Sie wird auf deinem Gerät berechnet, nicht abgefragt, weil kein öffentlicher Dienst dafür eine kostenlose Punktvorhersage bietet. wanderbar rechnet den Canadian Fire Weather Index über 60 Tage Open-Meteo-Wetterhistorie, und genau das gibt ihm Dürre-Gedächtnis statt nur den heutigen Tag zu bewerten. Sieh es als Hinweis und halte dich immer an das lokale Feuerverbot.'
   },
   {
+    q: 'Zeigt es Brände, die gerade brennen?',
+    a: (
+      <>
+        <p>
+          Ja, getrennt von der Waldbrandgefahr, denn das sind zwei
+          verschiedene Aussagen. Der Gefahrenindex sagt, wie leicht sich ein
+          Feuer hier ausbreiten würde, wenn eines ausbräche; das hier sagt, dass
+          bereits eines brennt. wanderbar fragt{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>{' '}
+          nach Satelliten-Detektionen im Umkreis von 20 km um deine Route in den
+          letzten 48 Stunden und zeigt, wie weit die nächstgelegene entfernt ist
+          und wann sie gesehen wurde.
+        </p>
+        <p>
+          Eine Detektion ist ein Bildpunkt, der heiß war, als ein Satellit
+          vorbeiflog. Sie ist kein Brandumriss, und nichts daran sagt, wohin das
+          Feuer zieht. Deshalb nennt wanderbar die Entfernung und hört dort auf.
+        </p>
+        <p>
+          Wird nichts gefunden, sagt wanderbar genau das, statt still zu
+          bleiben, und sagt dazu, dass es keine Garantie ist. Satelliten fliegen
+          nur einige Male am Tag vorbei, Wolken und Kronendach verdecken Feuer,
+          und kleine werden übersehen. &bdquo;Hier hat niemand ein Feuer
+          gesehen&ldquo; ist nicht derselbe Satz wie &bdquo;hier brennt
+          nichts&ldquo;. Und wenn der Dienst gar nicht erreichbar ist, sagt
+          wanderbar auch das.
+        </p>
+      </>
+    ),
+    text:
+      'Ja, getrennt von der Waldbrandgefahr, denn das sind zwei verschiedene Aussagen: Der Gefahrenindex sagt, wie leicht sich ein Feuer hier ausbreiten würde, wenn eines ausbräche, das hier sagt, dass bereits eines brennt. wanderbar fragt Copernicus EFFIS/GWIS nach Satelliten-Detektionen im Umkreis von 20 km um deine Route in den letzten 48 Stunden und zeigt, wie weit die nächstgelegene entfernt ist und wann sie gesehen wurde. Eine Detektion ist ein Bildpunkt, der heiß war, als ein Satellit vorbeiflog, kein Brandumriss, und nichts daran sagt, wohin das Feuer zieht; deshalb nennt wanderbar die Entfernung und hört dort auf. Wird nichts gefunden, sagt wanderbar genau das, statt still zu bleiben, und sagt dazu, dass es keine Garantie ist: Satelliten fliegen nur einige Male am Tag vorbei, Wolken und Kronendach verdecken Feuer, und kleine werden übersehen. "Hier hat niemand ein Feuer gesehen" ist nicht derselbe Satz wie "hier brennt nichts". Und wenn der Dienst gar nicht erreichbar ist, sagt wanderbar auch das.'
+  },
+  {
     q: 'Kann es Winterwandern abdecken?',
     a: (
       <>
@@ -737,6 +801,40 @@ export const faqFr: FaqEntry[] = [
     ),
     text:
       "C'est calculé sur ton appareil, pas récupéré : aucun service public ne propose de prévision ponctuelle gratuite pour ça. wanderbar fait tourner l'indice forêt-météo (FWI) canadien sur 60 jours d'historique météo Open-Meteo, ce qui lui donne une mémoire de sécheresse au lieu de juger seulement aujourd'hui. Prends ça comme une indication, et respecte toujours l'interdiction locale de feu."
+  },
+  {
+    q: 'Est-ce que ça montre les incendies déjà en cours ?',
+    a: (
+      <>
+        <p>
+          Oui, séparément du risque d&rsquo;incendie, parce que ce sont deux
+          affirmations différentes. L&rsquo;indice de risque dit avec quelle
+          facilité un feu se propagerait ici s&rsquo;il en partait un ; ceci dit
+          qu&rsquo;il y en a déjà un. wanderbar demande à{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>{' '}
+          les détections satellite à moins de 20 km de ton itinéraire sur les 48
+          dernières heures, et affiche à quelle distance se trouve la plus
+          proche et quand elle a été vue.
+        </p>
+        <p>
+          Une détection est un pixel qui était chaud au passage d&rsquo;un
+          satellite. Ce n&rsquo;est pas un contour d&rsquo;incendie, et rien
+          dedans ne dit dans quelle direction le feu va, donc wanderbar donne la
+          distance et s&rsquo;arrête là.
+        </p>
+        <p>
+          Quand rien n&rsquo;est trouvé, wanderbar le dit au lieu de se taire, et
+          précise que ce n&rsquo;est pas une garantie. Les satellites ne passent
+          que quelques fois par jour, les nuages et la canopée cachent les feux,
+          et les petits passent inaperçus. &laquo;&nbsp;Personne n&rsquo;a vu de
+          feu ici&nbsp;&raquo; n&rsquo;est pas la même phrase que
+          &laquo;&nbsp;il n&rsquo;y a pas de feu ici&nbsp;&raquo;. Et si le
+          service est injoignable, wanderbar le dit aussi.
+        </p>
+      </>
+    ),
+    text:
+      "Oui, séparément du risque d'incendie, parce que ce sont deux affirmations différentes : l'indice de risque dit avec quelle facilité un feu se propagerait ici s'il en partait un, tandis que ceci dit qu'il y en a déjà un. wanderbar demande à Copernicus EFFIS/GWIS les détections satellite à moins de 20 km de ton itinéraire sur les 48 dernières heures, et affiche à quelle distance se trouve la plus proche et quand elle a été vue. Une détection est un pixel qui était chaud au passage d'un satellite, pas un contour d'incendie, et rien dedans ne dit dans quelle direction le feu va, donc wanderbar donne la distance et s'arrête là. Quand rien n'est trouvé, wanderbar le dit au lieu de se taire, et précise que ce n'est pas une garantie : les satellites ne passent que quelques fois par jour, les nuages et la canopée cachent les feux, et les petits passent inaperçus. « Personne n'a vu de feu ici » n'est pas la même phrase que « il n'y a pas de feu ici ». Et si le service est injoignable, wanderbar le dit aussi."
   },
   {
     q: "Est-ce que ça gère la rando hivernale ?",
