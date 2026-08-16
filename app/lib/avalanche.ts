@@ -152,19 +152,32 @@ export function withFreshness(b: Bulletin, now: number): Bulletin {
   return { ...b, status: 'stale', level: null, bands: [], problems: [] }
 }
 
+/** A sampled point of the route, in the only two dimensions this app uses. */
+type Pt = { lat: number; lon: number }
+
 type Provider = {
   name: string
   url: string
   /** Rough bounds, so we only ask a service about ground it covers. */
   bbox: [number, number, number, number]
-  fetch: (lat: number, lon: number, signal: AbortSignal) => Promise<Bulletin>
+  /**
+   * Whether the service answers per coordinate. NVE and Avalanche Canada do,
+   * so each covered point is its own request. SLF and ALBINA publish one
+   * document for the whole country: asking it once per point would download
+   * the same megabyte three times on a phone with one bar, so they receive
+   * every covered point and resolve them against a single response.
+   */
+  pointQuery: boolean
+  fetch: (points: Pt[], signal: AbortSignal) => Promise<Bulletin>
 }
 
 const NVE: Provider = {
   name: 'Varsom / NVE',
   url: 'https://varsom.no/',
   bbox: [57, 4, 72, 32],
-  async fetch(lat, lon, signal) {
+  pointQuery: true,
+  async fetch(points, signal) {
+    const { lat, lon } = points[0]
     const day = new Date().toISOString().slice(0, 10)
     const res = await fetch(
       `https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0/api/AvalancheWarningByCoordinates/Simple/${lat.toFixed(4)}/${lon.toFixed(4)}/en/${day}/${day}`,
@@ -196,7 +209,9 @@ const AVCAN: Provider = {
   name: 'Avalanche Canada',
   url: 'https://avalanche.ca/',
   bbox: [44, -141, 71, -52],
-  async fetch(lat, lon, signal) {
+  pointQuery: true,
+  async fetch(points, signal) {
+    const { lat, lon } = points[0]
     const res = await fetch(
       `https://api.avalanche.ca/forecasts/en/products/point?lat=${lat.toFixed(4)}&long=${lon.toFixed(4)}`,
       { signal }
@@ -211,11 +226,6 @@ const AVCAN: Provider = {
       .map((r) => parseLevel(r?.value ?? r))
       .filter((l): l is DangerLevel => l !== null)
     if (levels.length === 0) return unavailable('out-of-season', AVCAN.name, AVCAN.url)
-    const bands: Band[] = []
-    const alp = parseLevel(today?.alp?.rating?.value ?? today?.alp?.rating)
-    const btl = parseLevel(today?.btl?.rating?.value ?? today?.btl?.rating)
-    if (alp !== null) bands.push({ level: alp, aboveM: null, belowM: null })
-    if (btl !== null && btl !== alp) bands.push({ level: btl, aboveM: null, belowM: null })
     return {
       status: 'ok',
       level: Math.max(...levels) as DangerLevel,
@@ -223,6 +233,13 @@ const AVCAN: Provider = {
       providerUrl: typeof j?.url === 'string' ? j.url : AVCAN.url,
       region: typeof j?.area?.name === 'string' ? j.area.name : null,
       headline: typeof j?.report?.highlights === 'string' ? stripHtml(j.report.highlights) : null,
+      // Empty on purpose. `Band` is an altitude split ("above 2200 m"), which
+      // is what the panel renders; Avalanche Canada publishes named tiers
+      // (alpine, treeline, below treeline) and no metres, so mapping them onto
+      // Band prints "overall: High · overall: Moderate" — two rows that say
+      // where nothing. The headline already carries the highest of the tiers.
+      // Showing the split here needs a tier-aware panel, not a coordinate-less
+      // Band. See plans/README.md.
       bands: [],
       problems: (j?.report?.problems ?? [])
         .map((p: any) => (typeof p?.type === 'string' ? problemLabel(p.type) : null))
@@ -281,16 +298,32 @@ const SLF: Provider = {
   name: 'SLF',
   url: 'https://www.slf.ch/en/avalanche-bulletin-and-snow-situation.html',
   bbox: [45.7, 5.8, 47.9, 10.6],
-  async fetch(lat, lon, signal) {
+  // One GeoJSON document for the whole country, so it is fetched once and
+  // every sampled point is resolved against the features already in hand.
+  pointQuery: false,
+  async fetch(points, signal) {
     const res = await fetch('https://aws.slf.ch/api/bulletin/caaml/en/geojson', { signal })
     if (!res.ok) throw new Error(`slf ${res.status}`)
     const j = (await res.json()) as { features?: any[] }
     const features = j?.features ?? []
     // Empty collection is how SLF says "no bulletin right now", i.e. summer.
     if (features.length === 0) return unavailable('out-of-season', SLF.name, SLF.url)
-    const hit = features.find((f) => inGeometry(f?.geometry, lat, lon))
-    if (!hit) return unavailable('no-coverage', SLF.name, SLF.url)
-    const p = hit.properties ?? {}
+    // Where the sampled points disagree the higher danger wins: a route
+    // crossing a region boundary is exposed to the worse of the two, and
+    // under-reporting is the direction that gets people killed.
+    let best: { p: any; level: DangerLevel } | null = null
+    let covered = false
+    for (const { lat, lon } of points) {
+      const hit = features.find((f) => inGeometry(f?.geometry, lat, lon))
+      if (!hit) continue
+      covered = true
+      const props = hit.properties ?? {}
+      const { level } = readCaaml(props.dangerRatings, props.avalancheProblems)
+      if (level !== null && (best === null || level > best.level)) best = { p: props, level }
+    }
+    if (!covered) return unavailable('no-coverage', SLF.name, SLF.url)
+    if (!best) return unavailable('out-of-season', SLF.name, SLF.url)
+    const p = best.p
     const { level, bands, problems } = readCaaml(p.dangerRatings, p.avalancheProblems)
     if (level === null) return unavailable('out-of-season', SLF.name, SLF.url)
     return {
@@ -321,7 +354,9 @@ const ALBINA: Provider = {
   name: 'avalanche.report',
   url: 'https://avalanche.report/',
   bbox: [45.6, 10.4, 47.8, 12.5],
-  async fetch(_lat, _lon, signal) {
+  // Region ids without geometry: the document is the same whatever point asks.
+  pointQuery: false,
+  async fetch(_points, signal) {
     const res = await fetch(
       'https://static.avalanche.report/bulletins/latest/EUREGIO_en_CAAMLv6.json',
       { signal }
@@ -382,19 +417,37 @@ export async function fetchBulletin(
   const idx = [...new Set([0, waypoints.length >> 1, waypoints.length - 1])]
   const points = idx.map((i) => waypoints[i])
 
-  const jobs: Promise<Bulletin>[] = []
-  for (const p of PROVIDERS) {
-    const covered = points.filter((w) => inBbox(p, w.lat, w.lon))
-    if (covered.length === 0) continue
-    const w = covered[0]
+  const ask = (p: Provider, pts: Pt[]): Promise<Bulletin> => {
     const ac = new AbortController()
     const timer = setTimeout(() => ac.abort(), timeoutMs)
-    jobs.push(
-      p
-        .fetch(w.lat, w.lon, ac.signal)
-        .catch(() => unavailable('error', p.name, p.url))
-        .finally(() => clearTimeout(timer))
-    )
+    return p
+      .fetch(pts, ac.signal)
+      .catch(() => unavailable('error', p.name, p.url))
+      .finally(() => clearTimeout(timer))
+  }
+
+  const jobs: Promise<Bulletin>[] = []
+  for (const p of PROVIDERS) {
+    // Every covered point, not just the first: a bbox is coarse enough that the
+    // start can sit outside the real polygon, and a route can cross into a
+    // higher-rated region of the same service. Asking one point reports the
+    // wrong end of both. De-duplicated because a short track collapses all
+    // three samples onto one coordinate, and identical asks spend the very
+    // budget the sampling exists to protect.
+    const covered = [
+      ...new Map(
+        points
+          .filter((w) => inBbox(p, w.lat, w.lon))
+          .map((w) => [`${w.lat},${w.lon}`, { lat: w.lat, lon: w.lon }] as const)
+      ).values()
+    ]
+    if (covered.length === 0) continue
+    // A service that answers per coordinate gets one request per point. One
+    // that publishes a single document gets one request holding all of them,
+    // because fetching the same megabyte three times on a trail is not a
+    // sampling budget, it is a bill someone pays in battery and signal.
+    if (p.pointQuery) jobs.push(...covered.map((pt) => ask(p, [pt])))
+    else jobs.push(ask(p, covered))
   }
   // Nowhere on this track is covered by a service we know how to ask.
   if (jobs.length === 0) return unavailable('no-coverage')
