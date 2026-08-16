@@ -53,6 +53,9 @@ const urls = [
   ...shells,
   '/manifest.webmanifest',
   '/icon.svg',
+  // Shown on the lock screen by a background push, which is exactly when the
+  // network may be gone.
+  '/icon-192.png',
   ...[...hashed].sort(),
   ...fonts.sort(),
   ...icons.sort()

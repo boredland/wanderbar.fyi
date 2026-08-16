@@ -58,7 +58,11 @@ const isStaticAsset = (p: string) =>
   p === '/manifest.webmanifest' ||
   p === '/icon.svg' ||
   p === '/favicon.ico' ||
-  p === '/apple-touch-icon.png'
+  p === '/apple-touch-icon.png' ||
+  // The notification icon: a lock-screen warning raised offline still has to
+  // carry its mark rather than a blank square.
+  p === '/icon-192.png' ||
+  p === '/icon-512.png'
 
 self.addEventListener('install', (e) => {
   /*
@@ -117,7 +121,7 @@ self.addEventListener('fetch', (e) => {
     return
   }
   if (isStaticAsset(url.pathname)) {
-    e.respondWith(staleWhileRevalidate(req))
+    e.respondWith(staleWhileRevalidate(req, e))
   }
 })
 
@@ -153,7 +157,7 @@ async function cacheFirst(req: Request): Promise<Response> {
   return res
 }
 
-async function staleWhileRevalidate(req: Request): Promise<Response> {
+async function staleWhileRevalidate(req: Request, e: FetchEvent): Promise<Response> {
   const cache = await caches.open(CACHE)
   const hit = await cache.match(req)
   const fresh = fetch(req)
@@ -162,6 +166,9 @@ async function staleWhileRevalidate(req: Request): Promise<Response> {
       return res
     })
     .catch(() => hit ?? Response.error())
+  // Answering from cache ends the event, and the worker can be killed with it:
+  // without this the revalidation is cancelled and the cache never refreshes.
+  if (hit) e.waitUntil(fresh)
   return hit ?? fresh
 }
 
