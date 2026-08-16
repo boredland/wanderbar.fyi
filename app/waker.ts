@@ -1,4 +1,5 @@
 import { buildPushPayload } from '@block65/webcrypto-web-push'
+import { isPushEndpoint } from './lib/push-endpoint'
 import { isValidSchedule, nextWakeMs, type Schedule } from './lib/schedule'
 
 export type WakerSave = {
@@ -82,6 +83,10 @@ export class Waker implements DurableObject {
     }
     if (!isValidSchedule(schedule)) return null
     if (!s.endpoint || !s.p256dh || !s.auth) return null
+    // alarm() signs a VAPID header and POSTs it to this URL, so it has to be a
+    // push service rather than wherever the caller points us. The DO is the
+    // authority: validating only in the route would leave this write unguarded.
+    if (!isPushEndpoint(s.endpoint)) return null
 
     this.#ctx.storage.sql.exec(
       `INSERT INTO sub (id, endpoint, p256dh, auth, interval_h, start_h, end_h, tz, updated_at)
