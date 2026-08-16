@@ -104,7 +104,7 @@ export function Page(props: { locale: Locale; shareError?: string; vapidPublicKe
 
       <TrackView locale={locale} />
 
-      <details class="panel">
+      <details class="panel" id="new-track">
         <summary>
           <h2 class="eyebrow">{t('panel.newTrack')}</h2>
         </summary>

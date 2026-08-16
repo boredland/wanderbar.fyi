@@ -38,6 +38,8 @@ const ELE_SOURCE: Record<Track['eleSource'], MessageKey | null> = {
 
 const OLD_FIX_MS = 6 * 3600_000
 const REFRESH_MS = 30 * 60_000
+/** How often the page re-reads the clock, so ages and position do not freeze. */
+const TICK_MS = 60_000
 
 /** Times more than a day out need their date, or "07:00" is ambiguous. */
 const dayTime = (locale: Locale, ms: number, now: number) => {
@@ -46,6 +48,9 @@ const dayTime = (locale: Locale, ms: number, now: number) => {
     ? clockAt(locale, ms)
     : new Date(ms).toLocaleString(locale, {
         weekday: 'short',
+        // A track can be planned 16 days out, where "Thu 10:00" names two dates.
+        day: 'numeric',
+        month: 'short',
         hour: '2-digit',
         minute: '2-digit'
       })
@@ -135,6 +140,14 @@ export default function TrackView(props: { locale: Locale }) {
     return () => clearInterval(id)
   }, [refetch])
 
+  // Every age, ETA and estimated position on this page is derived from `now`.
+  // Without its own tick they would all stand still between fetches, so a
+  // forecast half an hour old would keep claiming it was current.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), TICK_MS)
+    return () => clearInterval(id)
+  }, [])
+
   if (!loaded) return <div class="py-6 text-muted">{t('common.loading')}</div>
 
   // First run: without this the page is a logo above four collapsed panels,
@@ -148,7 +161,7 @@ export default function TrackView(props: { locale: Locale }) {
           type="button"
           class="btn btn-primary self-start"
           onClick={() => {
-            const panel = document.querySelector<HTMLDetailsElement>('details:has(input[name="gpx"])')
+            const panel = document.getElementById('new-track') as HTMLDetailsElement | null
             if (panel) {
               panel.open = true
               panel.scrollIntoView({ block: 'nearest' })
