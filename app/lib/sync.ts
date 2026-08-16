@@ -90,7 +90,10 @@ export async function syncNow(): Promise<Delta> {
       return EMPTY
     }
 
-    const prev = (await get('forecast'))?.warnings ?? []
+    // Scoped to the same window `next` was evaluated over: a warning that fell
+    // behind the hiker left because they walked, not because the weather
+    // changed, and reporting that as cleared is a false all-clear.
+    const prev = ((await get('forecast'))?.warnings ?? []).filter((w) => w.seq >= currentSeq)
     const delta = diffWarnings(prev, next)
 
     await set('forecast', {

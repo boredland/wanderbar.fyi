@@ -256,3 +256,42 @@ describe('a failed fetch', () => {
     expect(err?.message).toContain('offline')
   })
 })
+
+describe('a waypoint the hiker has walked past', () => {
+  /**
+   * `next` only ever holds warnings at or ahead of the hiker, so a warning
+   * behind them disappears because they moved, not because the weather did.
+   * Reporting that as cleared is a false all-clear, which is the one direction
+   * this app must never be wrong in.
+   */
+  it('is not reported as cleared just because it was walked past', async () => {
+    await set('track', track())
+    fetchOpenMeteo.mockResolvedValue(forecastFor(ALL_SEQS, [1, 8]))
+    const first = await syncNow()
+    expect(first.worsened.map((w) => `${w.seq}:${w.condition}`)).toEqual(
+      expect.arrayContaining(['1:wind', '8:wind'])
+    )
+
+    // Five hours later the hiker is at waypoint 5, and the gale at 8 still blows.
+    vi.setSystemTime(NOW + 5 * 3600_000)
+    fetchOpenMeteo.mockResolvedValue(forecastFor([5, 6, 7, 8, 9], [8]))
+
+    const second = await syncNow()
+
+    expect(second.cleared).toEqual([])
+  })
+
+  it('still reports a warning that genuinely lifted ahead of them', async () => {
+    await set('track', track())
+    fetchOpenMeteo.mockResolvedValue(forecastFor(ALL_SEQS, [1, 8]))
+    await syncNow()
+
+    // Same position change, but this time the gale at 8 has actually gone.
+    vi.setSystemTime(NOW + 5 * 3600_000)
+    fetchOpenMeteo.mockResolvedValue(forecastFor([5, 6, 7, 8, 9], []))
+
+    const second = await syncNow()
+
+    expect(second.cleared.map((w) => `${w.seq}:${w.condition}`)).toEqual(['8:wind'])
+  })
+})
