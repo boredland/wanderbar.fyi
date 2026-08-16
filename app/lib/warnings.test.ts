@@ -91,8 +91,19 @@ describe('evaluateWarnings', () => {
   })
 
   it('raises thunderstorm from MET probability when the code is quiet', () => {
-    const extras = { 0: { probabilityOfThunder: 40 } }
+    const extras = { 0: { thunderByHour: { [NOW]: 40 } } }
     expect(conditions(evaluate(hour(), DEFAULT_THRESHOLDS, extras))).toEqual(['thunderstorm'])
+  })
+
+  it('reads MET thunder at the hour walked, not at some other hour', () => {
+    // A single figure per waypoint used to be applied to every hour of the
+    // track: a morning storm then warned an evening waypoint, and a quiet
+    // morning hid an afternoon one.
+    const elsewhere = { 0: { thunderByHour: { [NOW - 6 * 3600_000]: 90 } } }
+    expect(conditions(evaluate(hour(), DEFAULT_THRESHOLDS, elsewhere))).toEqual([])
+
+    const here = { 0: { thunderByHour: { [NOW - 6 * 3600_000]: 0, [NOW]: 90 } } }
+    expect(conditions(evaluate(hour(), DEFAULT_THRESHOLDS, here))).toEqual(['thunderstorm'])
   })
 
   it('skips waypoints already behind the hiker', () => {
@@ -349,14 +360,14 @@ describe('warning provenance', () => {
     // Open-Meteo's code 1 is a clear sky: without MET there is no warning here,
     // so attributing this one to Open-Meteo would be a lie the user could act on.
     const ws = evaluate(hour({ code: 1 }), DEFAULT_THRESHOLDS, {
-      0: { probabilityOfThunder: 60 }
+      0: { thunderByHour: { [NOW]: 60 } }
     })
     expect(sourceOf(ws, 'thunderstorm')).toBe('met')
   })
 
   it('credits both when both raise the same storm', () => {
     const ws = evaluate(hour({ code: 95 }), DEFAULT_THRESHOLDS, {
-      0: { probabilityOfThunder: 60 }
+      0: { thunderByHour: { [NOW]: 60 } }
     })
     expect(sourceOf(ws, 'thunderstorm')).toBe('open-meteo+met')
   })

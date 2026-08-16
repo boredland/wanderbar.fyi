@@ -133,7 +133,12 @@ const ICE_CODES: Record<number, true> = { 56: true, 57: true, 66: true, 67: true
 /** A warning is about weather where and when the hiker will actually be. */
 const ETA_WINDOW_MS = 3600_000
 
-export type MetExtras = { probabilityOfThunder?: number | null }
+/**
+ * MET's cross-check, per forecast hour rather than per waypoint: a single
+ * scalar applied to a whole track would warn evening waypoints about a morning
+ * storm and miss an afternoon one after a quiet morning.
+ */
+export type MetExtras = { thunderByHour?: Record<number, number> }
 
 export function evaluateWarnings(
   thresholds: Thresholds,
@@ -219,9 +224,9 @@ export function evaluateWarnings(
       }
       if (code !== null && HAIL_CODES[code]) push('hail', { kind: 'hailPossible' })
 
-      const metThunder = metExtras[wf.seq]?.probabilityOfThunder
+      const metThunder = metExtras[wf.seq]?.thunderByHour?.[h.t]
       const omThunder = code !== null && THUNDER_CODES[code]
-      const saysThunder = metThunder !== null && metThunder !== undefined && metThunder >= 30
+      const saysThunder = metThunder !== undefined && metThunder >= 30
       if (omThunder || saysThunder) {
         push(
           'thunderstorm',

@@ -55,28 +55,10 @@ const WMO_BASE: Record<number, string> = {
   99: 'heavyrainandthunder'
 }
 
-/**
- * Six repo files carry a doubled `s` while MET's API returns the correct
- * spelling, so an unmapped lookup 404s.
- */
-const FILENAME_FIXUP: Record<string, string> = {
-  lightsleetshowersandthunder: 'lightssleetshowersandthunder',
-  lightsnowshowersandthunder: 'lightssnowshowersandthunder'
-}
-
 export function wmoIcon(code: number | null, isDay: boolean): string {
   const base = (code !== null && WMO_BASE[code]) || 'cloudy'
   const suffix = DAY_VARIANT[base] ? (isDay ? '_day' : '_night') : ''
   return `/wx/${base}${suffix}.svg`
-}
-
-export function metIcon(symbolCode: string): string {
-  const m = /^(.*?)(_(?:day|night|polartwilight))?$/.exec(symbolCode)
-  const base = m?.[1] ?? symbolCode
-  const suffix = m?.[2] ?? ''
-  const fixed = FILENAME_FIXUP[base] ?? base
-  if (!KNOWN_BASES[fixed]) return '/wx/cloudy.svg'
-  return `/wx/${fixed}${DAY_VARIANT[fixed] ? suffix || '_day' : ''}.svg`
 }
 
 /** Cosmetic sun-versus-moon choice only, so a fixed window is deliberate. */
@@ -85,47 +67,3 @@ export function isDayHour(ms: number): boolean {
   return h >= 6 && h < 20
 }
 
-/** The 41 base names present in public/wx (83 files incl. day/night variants). */
-const KNOWN_BASES: Record<string, true> = {
-  clearsky: true,
-  cloudy: true,
-  fair: true,
-  fog: true,
-  heavyrain: true,
-  heavyrainandthunder: true,
-  heavyrainshowers: true,
-  heavyrainshowersandthunder: true,
-  heavysleet: true,
-  heavysleetandthunder: true,
-  heavysleetshowers: true,
-  heavysleetshowersandthunder: true,
-  heavysnow: true,
-  heavysnowandthunder: true,
-  heavysnowshowers: true,
-  heavysnowshowersandthunder: true,
-  lightrain: true,
-  lightrainandthunder: true,
-  lightrainshowers: true,
-  lightrainshowersandthunder: true,
-  lightsleet: true,
-  lightsleetandthunder: true,
-  lightsleetshowers: true,
-  lightssleetshowersandthunder: true,
-  lightsnow: true,
-  lightsnowandthunder: true,
-  lightsnowshowers: true,
-  lightssnowshowersandthunder: true,
-  partlycloudy: true,
-  rain: true,
-  rainandthunder: true,
-  rainshowers: true,
-  rainshowersandthunder: true,
-  sleet: true,
-  sleetandthunder: true,
-  sleetshowers: true,
-  sleetshowersandthunder: true,
-  snow: true,
-  snowandthunder: true,
-  snowshowers: true,
-  snowshowersandthunder: true
-}

@@ -23,8 +23,8 @@ export type SunDay = { sunriseMs: number; sunsetMs: number }
 
 export type MetPoint = {
   hours: Hour[]
-  symbolCode: string | null
-  probabilityOfThunder: number | null
+  /** Thunder probability per UTC hour, keyed by the hour's epoch ms. */
+  thunderByHour: Record<number, number>
 }
 
 const HOURLY_VARS = [
@@ -118,20 +118,21 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
   const json = (await res.json()) as { properties?: { timeseries?: MetEntry[] } }
   const series = json?.properties?.timeseries ?? []
 
-  let symbolCode: string | null = null
-  let probabilityOfThunder: number | null = null
+  const thunderByHour: Record<number, number> = {}
   const hours: Hour[] = series.map((e) => {
     const d = e.data?.instant?.details ?? {}
     const nextH = e.data?.next_1_hours ?? e.data?.next_6_hours
-    const sym = nextH?.summary?.symbol_code
-    if (sym && !symbolCode) symbolCode = sym.replace(/_(day|night|polartwilight)$/, '')
+    const t = Date.parse(e.time)
     const thunder = nextH?.details?.probability_of_thunder
-    if (typeof thunder === 'number' && probabilityOfThunder === null) probabilityOfThunder = thunder
+    // Per hour, never collapsed to one number: a storm at 06:00 says nothing
+    // about an evening waypoint, and a quiet morning must not mask an
+    // afternoon one.
+    if (typeof thunder === 'number') thunderByHour[t] = thunder
 
     const wind = d.wind_speed
     const gust = d.wind_speed_of_gust
     return {
-      t: Date.parse(e.time),
+      t,
       tempC: d.air_temperature ?? null,
       apparentC: null,
       precipMm: nextH?.details?.precipitation_amount ?? null,
@@ -144,7 +145,7 @@ export async function fetchMet(lat: number, lon: number): Promise<MetPoint> {
       capeJkg: null
     }
   })
-  return { hours, symbolCode, probabilityOfThunder }
+  return { hours, thunderByHour }
 }
 
 /**

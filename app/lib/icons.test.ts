@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { metIcon, wmoIcon } from './icons'
+import { wmoIcon } from './icons'
 import { translator, type MessageKey } from './i18n'
 import { LOCALES } from './i18n/locale'
 import type { Condition } from './warnings'
@@ -41,28 +41,6 @@ describe('wmoIcon', () => {
     expect(wmoIcon(0, false)).toBe('/wx/clearsky_night.svg')
     expect(wmoIcon(3, true)).toBe('/wx/cloudy.svg')
     expect(wmoIcon(45, true)).toBe('/wx/fog.svg')
-  })
-})
-
-describe('metIcon', () => {
-  it('round-trips all 83 real filenames to files that exist', () => {
-    for (const f of files) {
-      const url = metIcon(f.replace(/\.svg$/, ''))
-      expect(onDisk(url), `${f} -> ${url}`).toBe(true)
-    }
-  })
-
-  it('remaps the doubled-s filenames MET spells correctly', () => {
-    expect(metIcon('lightsleetshowersandthunder_day')).toBe(
-      '/wx/lightssleetshowersandthunder_day.svg'
-    )
-    expect(metIcon('lightsnowshowersandthunder_day')).toBe(
-      '/wx/lightssnowshowersandthunder_day.svg'
-    )
-  })
-
-  it('falls back to cloudy for an unknown symbol', () => {
-    expect(metIcon('nonsense')).toBe('/wx/cloudy.svg')
   })
 })
 

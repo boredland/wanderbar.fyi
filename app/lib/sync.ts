@@ -36,16 +36,12 @@ export async function syncNow(): Promise<Delta> {
       checkpoints.map((i) => fetchMet(remaining[i].lat, remaining[i].lon))
     )
     const met: Record<number, Hour[]> = {}
-    const metSymbols: Record<number, string | null> = {}
-    const metThunder: Record<number, number | null> = {}
     const metExtras: Record<number, MetExtras> = {}
     metResults.forEach((r, i) => {
       if (r.status !== 'fulfilled') return
       const seq = remaining[checkpoints[i]].seq
       met[seq] = r.value.hours
-      metSymbols[seq] = r.value.symbolCode
-      metThunder[seq] = r.value.probabilityOfThunder
-      metExtras[seq] = { probabilityOfThunder: r.value.probabilityOfThunder }
+      metExtras[seq] = { thunderByHour: r.value.thunderByHour }
     })
 
     // Fire danger: one keyless call for 60 days of spin-up plus the forecast.
@@ -98,8 +94,6 @@ export async function syncNow(): Promise<Delta> {
       currentSeq,
       waypoints,
       met,
-      metSymbols,
-      metThunder,
       fwiByDate,
       warnings: next,
       avalanche,
