@@ -12,6 +12,18 @@ export async function requestPermission(): Promise<NotificationPermission> {
   return Notification.requestPermission()
 }
 
+/**
+ * The registration that can show a notification, from either side.
+ *
+ * `navigator.serviceWorker` does not exist on a WorkerNavigator, so reading
+ * `.ready` from the service worker throws — which is the one place a background
+ * push has to produce a notification.
+ */
+function registration(): Promise<ServiceWorkerRegistration> {
+  if ('serviceWorker' in navigator) return navigator.serviceWorker.ready
+  return Promise.resolve((self as unknown as ServiceWorkerGlobalScope).registration)
+}
+
 function line(t: T, locale: Locale, w: Warning, kmBySeq: Record<number, number>): string {
   const km = kmBySeq[w.seq]
   const where =
@@ -46,7 +58,7 @@ export async function notifyDelta(
   if (delta.worsened.length === 0 && delta.cleared.length === 0) return
   if (!('Notification' in globalThis) || Notification.permission !== 'granted') return
 
-  const reg = await navigator.serviceWorker.ready
+  const reg = await registration()
 
   // Read from IndexedDB rather than taken as an argument: this also runs from
   // the service worker on a background push, where there is no page to ask.
