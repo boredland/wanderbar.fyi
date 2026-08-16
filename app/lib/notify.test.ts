@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import 'fake-indexeddb/auto'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { detailText, plural, translator } from './i18n'
 import { LOCALES } from './i18n/locale'
-import type { Detail } from './warnings'
+import { notifyDelta } from './notify'
+import { set } from './store'
+import type { Detail, Warning } from './warnings'
 
 /**
  * Notification text is built in the service worker from a background push,
@@ -69,5 +72,90 @@ describe('lifted-warning counts', () => {
     expect(plural(translator('de'), 'de', 'notify.lifted', 3)).toContain('3 Warnungen')
     expect(plural(translator('fr'), 'fr', 'notify.lifted', 1)).toContain('1 alerte levée')
     expect(plural(translator('fr'), 'fr', 'notify.lifted', 3)).toContain('3 alertes levées')
+  })
+})
+
+/**
+ * The notification itself, not just the strings in it. A background push has no
+ * page to correct a bad call, so the case that matters most is the silent one:
+ * unchanged weather must produce nothing at all.
+ */
+describe('notifyDelta', () => {
+  const shown: { title: string; options: NotificationOptions }[] = []
+
+  // `navigator` is a read-only global in Node, so it has to be defined rather
+  // than assigned; stubGlobal does that and restores it afterwards.
+  const grant = (permission: NotificationPermission) => {
+    vi.stubGlobal('Notification', { permission })
+    vi.stubGlobal('navigator', {
+      serviceWorker: {
+        ready: Promise.resolve({
+          showNotification: (title: string, options: NotificationOptions) => {
+            shown.push({ title, options })
+            return Promise.resolve()
+          }
+        })
+      }
+    })
+  }
+
+  const warning = (seq: number, over: Partial<Warning> = {}): Warning => ({
+    seq,
+    condition: 'wind',
+    forecastHour: Date.UTC(2026, 7, 6, 14),
+    detail: { kind: 'gusts', gustKmh: 62 },
+    source: 'open-meteo',
+    ...over
+  })
+
+  beforeEach(async () => {
+    shown.length = 0
+    await set('locale', 'en')
+    grant('granted')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('shows nothing when nothing changed', async () => {
+    // The entire reason the diff exists: unchanged weather is lock-screen spam.
+    await notifyDelta({ worsened: [], cleared: [] })
+    expect(shown).toEqual([])
+  })
+
+  it('shows nothing when permission was never granted', async () => {
+    grant('default')
+    await notifyDelta({ worsened: [warning(1)], cleared: [] })
+    expect(shown).toEqual([])
+  })
+
+  it('names the warnings that worsened', async () => {
+    await notifyDelta({ worsened: [warning(1)], cleared: [] }, { 1: 4.2 })
+    expect(shown).toHaveLength(1)
+    expect(shown[0].title).toBe(translator('en')('notify.worsened'))
+    expect(shown[0].options.body).toContain('4.2')
+    expect(shown[0].options.body).toContain('62')
+  })
+
+  it('caps the body at three and says how many more there are', async () => {
+    const worsened = [1, 2, 3, 4, 5].map((seq) => warning(seq))
+    await notifyDelta({ worsened, cleared: [] })
+    const lines = (shown[0].options.body ?? '').split('\n')
+    expect(lines).toHaveLength(4)
+    expect(lines[3]).toContain('2')
+  })
+
+  it('titles a clearing differently from a worsening', async () => {
+    await notifyDelta({ worsened: [], cleared: [warning(2)] })
+    expect(shown[0].title).toBe(translator('en')('notify.clearing'))
+    expect(shown[0].title).not.toBe(translator('en')('notify.worsened'))
+  })
+
+  it('falls back to the waypoint number when it has no distance for it', async () => {
+    await notifyDelta({ worsened: [warning(7)], cleared: [] })
+    const body = shown[0].options.body ?? ''
+    expect(body).toContain('7')
+    expect(body).not.toContain('undefined')
   })
 })

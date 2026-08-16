@@ -25,6 +25,7 @@
     "@tailwindcss/vite": "^4.3.2",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.1.2",
+    "fake-indexeddb": "6.2.5",
     "tailwindcss": "^4.3.2",
     "vite": "^8.1.4",
     "vitest": "^4.1.10",
