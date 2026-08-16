@@ -280,7 +280,6 @@ export const de: Messages = {
   'schedule.to': 'Bis',
   'schedule.hours': '{n} Std',
   'schedule.invalidRange': 'Die Startstunde muss vor der Endstunde liegen.',
-  'schedule.enableButton': 'Benachrichtigungen aktivieren',
   'schedule.enabling': 'Wird aktiviert…',
   'schedule.nextCheck': 'Nächste Prüfung {time}.',
   'schedule.saveFailed': 'Dieser Zeitplan konnte nicht gespeichert werden.',

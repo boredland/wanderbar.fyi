@@ -286,7 +286,6 @@ export const fr: Messages = {
   'schedule.to': 'À',
   'schedule.hours': '{n} h',
   'schedule.invalidRange': "L'heure de début doit précéder l'heure de fin.",
-  'schedule.enableButton': 'Activer les notifications',
   'schedule.enabling': 'Activation…',
   'schedule.nextCheck': 'Prochaine vérification {time}.',
   'schedule.saveFailed': "Ce programme n'a pas pu être enregistré.",

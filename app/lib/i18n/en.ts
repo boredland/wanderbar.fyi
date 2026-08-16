@@ -279,7 +279,6 @@ export const en = {
   'schedule.to': 'To',
   'schedule.hours': '{n} h',
   'schedule.invalidRange': 'The start hour must come before the end hour.',
-  'schedule.enableButton': 'Enable notifications',
   'schedule.enabling': 'Enabling…',
   'schedule.nextCheck': 'Next check {time}.',
   'schedule.saveFailed': 'Could not save that schedule.',

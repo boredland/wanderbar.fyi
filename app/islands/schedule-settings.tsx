@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'hono/jsx'
+import { useEffect, useState } from 'hono/jsx'
 import { useLocale } from '../lib/i18n'
 import type { Locale } from '../lib/i18n/locale'
 import { requestPermission } from '../lib/notify'
@@ -30,50 +30,37 @@ export default function ScheduleSettings(props: { vapidPublicKey: string; locale
     set('vapidPublicKey', props.vapidPublicKey)
   }, [props.vapidPublicKey])
 
-  const push = useCallback(async (next: Schedule) => {
-    setS(next)
-    await set('schedule', next)
-    if (!next.enabled) {
-      await fetch('/api/wake', { method: 'DELETE' })
-      setStatus(t('schedule.off'))
-      dispatchEvent(new Event('wanderbar:changed'))
-      return
-    }
-    const reg = await navigator.serviceWorker.ready
-    const existing = await reg.pushManager.getSubscription()
-    if (!existing) return
-    const json = existing.toJSON()
-    const res = await fetch('/api/wake', {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        endpoint: existing.endpoint,
-        p256dh: json.keys?.p256dh,
-        auth: json.keys?.auth,
-        intervalH: next.intervalH,
-        startH: next.startH,
-        endH: next.endH,
-        tz: next.tz
-      })
-    })
-    const body = (await res.json()) as { nextWakeMs?: number; error?: string }
-    setStatus(
-      body.nextWakeMs
-        ? t('schedule.nextCheck', { time: new Date(body.nextWakeMs).toLocaleString(locale) })
-        : t('schedule.saveFailed')
-    )
-    dispatchEvent(new Event('wanderbar:changed'))
-  }, [])
-
-  // Permission must be requested from the click itself.
-  const enable = async () => {
+  /**
+   * Saves the schedule against a live push subscription, creating one if there
+   * is none yet.
+   *
+   * Every caller is a click, which is what makes the permission prompt legal:
+   * ticking the box used to store `enabled: true`, find no subscription and
+   * return in silence, leaving a checked box that woke nothing.
+   */
+  const push = async (next: Schedule) => {
     setBusy(true)
     try {
+      setS(next)
+      await set('schedule', next)
+      if (!next.enabled) {
+        await fetch('/api/wake', { method: 'DELETE' })
+        setStatus(t('schedule.off'))
+        dispatchEvent(new Event('wanderbar:changed'))
+        return
+      }
+
       const permission = await requestPermission()
       if (permission !== 'granted') {
+        // Say so and put the box back: a schedule nothing can deliver is worse
+        // than an off switch.
+        const off = { ...next, enabled: false }
+        setS(off)
+        await set('schedule', off)
         setStatus(t('schedule.blocked'))
         return
       }
+
       const reg = await navigator.serviceWorker.ready
       const sub =
         (await reg.pushManager.getSubscription()) ??
@@ -82,9 +69,6 @@ export default function ScheduleSettings(props: { vapidPublicKey: string; locale
           applicationServerKey: urlBase64ToUint8Array(props.vapidPublicKey)
         }))
       const json = sub.toJSON()
-      const next = { ...s, enabled: true }
-      setS(next)
-      await set('schedule', next)
       const res = await fetch('/api/wake', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
@@ -98,7 +82,7 @@ export default function ScheduleSettings(props: { vapidPublicKey: string; locale
           tz: next.tz
         })
       })
-      const body = (await res.json()) as { nextWakeMs?: number }
+      const body = (await res.json()) as { nextWakeMs?: number; error?: string }
       setStatus(
         body.nextWakeMs
           ? t('schedule.nextCheck', { time: new Date(body.nextWakeMs).toLocaleString(locale) })
@@ -118,9 +102,10 @@ export default function ScheduleSettings(props: { vapidPublicKey: string; locale
         <input
           type="checkbox"
           checked={s.enabled}
+          disabled={busy}
           onChange={(e) => push({ ...s, enabled: (e.target as HTMLInputElement).checked })}
         />
-        <span class="text-base">{t('schedule.enable')}</span>
+        <span class="text-base">{busy ? t('schedule.enabling') : t('schedule.enable')}</span>
       </label>
 
       <label class="flex items-center justify-between gap-4">
@@ -172,14 +157,6 @@ export default function ScheduleSettings(props: { vapidPublicKey: string; locale
         <p class="text-sm text-warn">{t('schedule.invalidRange')}</p>
       ) : null}
 
-      <button
-        type="button"
-        class="btn"
-        disabled={busy}
-        onClick={enable}
-      >
-        {busy ? t('schedule.enabling') : t('schedule.enableButton')}
-      </button>
       {status ? <p class="text-sm text-muted">{status}</p> : null}
     </div>
   )
