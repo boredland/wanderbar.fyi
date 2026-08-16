@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SCHEDULE,
   isValidSchedule,
-  isWithinActiveHours,
   nextWakeMs,
   type Schedule
 } from './schedule'
@@ -80,15 +79,6 @@ describe('nextWakeMs', () => {
     const next = nextWakeMs(BERLIN, now)!
     expect(next).toBeGreaterThan(now)
     expect((hourIn('Europe/Berlin', next) - BERLIN.startH) % BERLIN.intervalH).toBe(0)
-  })
-})
-
-describe('isWithinActiveHours', () => {
-  it('brackets the window inclusively', () => {
-    expect(isWithinActiveHours(BERLIN, berlin('2026-07-15T07:00', 2))).toBe(true)
-    expect(isWithinActiveHours(BERLIN, berlin('2026-07-15T19:00', 2))).toBe(true)
-    expect(isWithinActiveHours(BERLIN, berlin('2026-07-15T06:59', 2))).toBe(false)
-    expect(isWithinActiveHours(BERLIN, berlin('2026-07-15T20:00', 2))).toBe(false)
   })
 })
 

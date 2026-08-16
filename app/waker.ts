@@ -11,14 +11,6 @@ export type WakerSave = {
   tz: string
 }
 
-export type WakerStatus = {
-  subscribed: boolean
-  intervalH: number | null
-  startH: number | null
-  endH: number | null
-  nextWakeMs: number | null
-}
-
 type Row = {
   endpoint: string
   p256dh: string
@@ -67,7 +59,6 @@ export class Waker implements DurableObject {
   }
 
   async fetch(req: Request): Promise<Response> {
-    if (req.method === 'GET') return Response.json(this.status())
     if (req.method === 'DELETE') {
       await this.clear()
       return Response.json({ ok: true })
@@ -117,20 +108,6 @@ export class Waker implements DurableObject {
   async clear(): Promise<void> {
     this.#ctx.storage.sql.exec('DELETE FROM sub')
     await this.#ctx.storage.deleteAlarm()
-  }
-
-  status(): WakerStatus {
-    const row = this.#row()
-    if (!row) {
-      return { subscribed: false, intervalH: null, startH: null, endH: null, nextWakeMs: null }
-    }
-    return {
-      subscribed: true,
-      intervalH: row.interval_h,
-      startH: row.start_h,
-      endH: row.end_h,
-      nextWakeMs: nextWakeMs(scheduleOf(row), Date.now())
-    }
   }
 
   async alarm(): Promise<void> {

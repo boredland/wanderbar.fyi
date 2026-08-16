@@ -23,6 +23,13 @@ export const DEFAULT_SCHEDULE: Schedule = {
 const HOUR_MS = 3600_000
 
 export function isValidSchedule(s: Schedule): boolean {
+  // An unknown zone makes every later Intl call throw, which would take out the
+  // alarm re-arm and silently end all future wakes. Reject it at the door.
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: s.tz })
+  } catch {
+    return false
+  }
   return (
     Number.isInteger(s.intervalH) &&
     s.intervalH >= 1 &&
@@ -47,11 +54,6 @@ function localHour(tz: string, ms: number): number {
     hour12: false
   }).format(new Date(ms))
   return Number(s) % 24
-}
-
-export function isWithinActiveHours(s: Schedule, nowMs: number): boolean {
-  const h = localHour(s.tz, nowMs)
-  return h >= s.startH && h <= s.endH
 }
 
 /**

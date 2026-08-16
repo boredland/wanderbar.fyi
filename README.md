@@ -18,7 +18,7 @@ warning. It does exactly three things:
   the hourly series total ~150 kB against ~9 kB reduced. Coordinates are snapped
   to a 0.25 deg grid and the result is cached for a day, so everyone on a cell
   shares one entry.
-- `PUT|GET|DELETE /api/wake`: stores **one** push subscription plus **one**
+- `PUT|DELETE /api/wake`: stores **one** push subscription plus **one**
   whole-hour schedule in a single Durable Object, and sends an empty wake-up
   push on that schedule.
 
