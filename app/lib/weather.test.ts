@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  FWI_MIN_SPINUP_DAYS,
   fwiInputsUrls,
   reduceToNoonInputs,
   solarNoonUtcHour,
@@ -125,15 +126,18 @@ describe('reduceToNoonInputs', () => {
     expect(rows.map((r) => new Date(r.t).toISOString().slice(0, 10))).toEqual(['2026-06-02'])
   })
 
-  it('yields nothing when the series opens with a long run of gaps', () => {
+  it('skips a long opening run of gaps instead of dropping the real days after it', () => {
     // Open-Meteo does this past roughly past_days=60: it starts the series with
-    // hundreds of empty hours rather than refusing. Emitting partial days from
-    // the tail would hand the codes a series with no spin-up, so nothing is
-    // returned and the caller keeps the previous reading.
+    // hundreds of empty hours rather than refusing. That padding is not data,
+    // so it is skipped rather than ending the run — otherwise one null hour at
+    // the head would discard every real day behind it. What survives is far
+    // short of FWI_MIN_SPINUP_DAYS, which is what suppresses the reading.
     const h = hourly('2026-06-01', 96, (i) =>
       i < 72 ? { temperature_2m: null, relative_humidity_2m: null, wind_speed_10m: null } : {}
     )
-    expect(reduceToNoonInputs(h, 0)).toEqual([])
+    const rows = reduceToNoonInputs(h, 0)
+    expect(rows.map((r) => new Date(r.t).toISOString().slice(0, 10))).toEqual(['2026-06-04'])
+    expect(rows.length).toBeLessThan(FWI_MIN_SPINUP_DAYS)
   })
 
   it('returns nothing for an empty series', () => {

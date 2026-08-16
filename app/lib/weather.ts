@@ -296,7 +296,12 @@ export function reduceToNoonInputs(hourly: OpenMeteoHourly, lon: number): FwiInp
     const tempC = at(hourly.temperature_2m, i)
     const rh = at(hourly.relative_humidity_2m, i)
     const windKmh = at(hourly.wind_speed_10m, i)
-    if (tempC === null || rh === null || windKmh === null) break
+    // Same rule as the rain window below: a gap before the run has started is
+    // leading padding to skip, a gap inside it would corrupt the running codes.
+    if (tempC === null || rh === null || windKmh === null) {
+      if (out.length > 0) break
+      continue
+    }
 
     // Open-Meteo stamps precipitation with the end of the hour it fell in, so
     // the 24 h window ending at noon is the 24 samples through this one.
