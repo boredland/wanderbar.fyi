@@ -19,8 +19,8 @@ warning. It does exactly three things:
   to a 0.25 deg grid and the result is cached for a day, so everyone on a cell
   shares one entry.
 - `PUT|DELETE /api/wake`: stores **one** push subscription plus **one**
-  whole-hour schedule in a single Durable Object, and sends an empty wake-up
-  push on that schedule.
+  whole-hour schedule per Durable Object, named by the subscription's endpoint,
+  and sends an empty wake-up push on that schedule.
 
 The service worker does the rest: on `push` it reads IndexedDB, fetches the
 forecast, evaluates warnings, diffs against the previous set, and shows a
@@ -42,6 +42,15 @@ GPX ─→ parse ─→ resample (≤60 wpts) ─→ pace profile ─→ ETAs
   message, never expanded.
 - **The only server state is a push subscription and a schedule.** No D1, no KV,
   no R2, no queue, no cron. The DO's own alarm replaces them.
+  One instance per subscription, keyed by its endpoint. It was a single instance
+  named `solo` on the reading that there is one track and therefore one
+  subscription: true of one reader, false of a deployment. The row is `id = 1`,
+  so a second subscriber overwrote the first, and either one switching
+  notifications off deleted the only row there was — leaving the other with a
+  ticked box, an armed-looking schedule and no wakes. The endpoint is the
+  subscription's own identity, so it is what the instance is named after, and
+  stopping a schedule now says which one. `idFromName` hashes it, and it is the
+  same string the alarm already posts to.
 - **Positioning is 2D.** GPS `altitude` is the wrong datum (ellipsoidal vs the
   GPX/DEM orthometric metres), platform-inconsistent and too noisy, so it is
   stored for diagnostics and read by nothing.
@@ -268,6 +277,7 @@ on every wake; that is lock-screen spam.
 | `app/lib/store.ts` | The only IndexedDB access; imported by page *and* worker |
 | `app/lib/sync.ts` | Fetch → evaluate → diff → persist |
 | `app/waker.ts` | The Durable Object: one subscription, one schedule |
+| `app/lib/wake.ts` | `stopWake`: ends a schedule by naming its endpoint |
 | `app/sw/index.ts` | Service worker source; `public/sw.js` is **generated** |
 | `scripts/precache-manifest.ts` | Writes `app/sw/precache.ts` from the built asset manifest |
 

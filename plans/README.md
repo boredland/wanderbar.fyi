@@ -66,6 +66,28 @@ caching a redirected localized document under `/`; `resubscribe()` ignoring
 `Date.parse(`${row.ValidTo}Z`)` in the NVE provider; `openDb()` memoising a
 rejected promise. The first of those is worth its own plan.
 
+## Follow-ups closed after the first push
+
+- **The browser verification plan 007 could not run** has been done. A cached
+  Chrome in `~/.cache/puppeteer` needed only `libasound.so.2`, extracted from
+  the .deb into a temp dir rather than installed. A real page's `PUT` and
+  bodiless `DELETE` both send `sec-fetch-site: same-origin` and an `Origin`
+  header, and both return 200. A fetch issued from inside a real
+  `ServiceWorkerGlobalScope` sends `sec-fetch-site: same-origin` too, which
+  settles the review's largest worry: push resubscription is not broken. A
+  cross-origin `DELETE` never reaches the handler (CORS preflight `OPTIONS`
+  404s), and a cross-origin form POST 404s because the route defines no POST.
+- **The singleton Durable Object** is fixed. It is now one instance per push
+  subscription, named by endpoint. Reproduced first: with two subscribers, B's
+  PUT overwrote A's row and B's DELETE removed it entirely, leaving A with no
+  wakes and nothing on screen to say so. After the change each keeps its own
+  row and B switching off leaves A's intact — verified against a running
+  worker. `waker.ts` itself is unchanged; the bug was in addressing, not in the
+  object. Stopping a schedule now names its endpoint (`app/lib/wake.ts`), and
+  the service worker retires the old endpoint's instance on rotation, which
+  also closes the review's finding that a rotation re-enabled notifications the
+  reader had switched off.
+
 ## Dependency notes
 
 - **002 requires 001** because 002 changes the diff input in `app/lib/sync.ts`,
