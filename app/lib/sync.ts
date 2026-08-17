@@ -1,5 +1,6 @@
 import { fetchBulletin } from './avalanche'
 import { runFwi } from './fwi'
+import { fetchFireRanking } from './fire-ranking'
 import { fetchLightning } from './lightning'
 import { get, set } from './store'
 import { estimatePosition, startAnchorMs } from './track'
@@ -45,11 +46,25 @@ export async function syncNow(): Promise<Delta> {
       metExtras[seq] = { thunderByHour: r.value.thunderByHour }
     })
 
+    /*
+     * Fire danger and its climatology are both regional daily figures, so both
+     * are sampled at one point rather than per waypoint. The midpoint, so a
+     * long route is described by its middle rather than by whichever end the
+     * hiker happens to be standing at.
+     */
+    const mid = remaining[Math.floor(remaining.length / 2)]
+
+    /*
+     * Readings are kept per date and carried across syncs, so yesterday's have
+     * to be dropped or the maps grow for as long as the track is loaded.
+     */
+    const today = new Date(now).toISOString().slice(0, 10)
+    const previous = await get('forecast')
+
     // Fire danger: one keyless call for 60 days of spin-up plus the forecast.
     // Treated like MET, a cross-check that must never gate the sync.
     const fwiByDate: Record<string, number> = {}
     try {
-      const mid = remaining[Math.floor(remaining.length / 2)]
       const inputs = await fetchFwiInputs(mid.lat, mid.lon, days)
       // runFwi preserves input order, so zip back by index.
       const run = runFwi(inputs, mid.lat)
@@ -73,17 +88,33 @@ export async function syncNow(): Promise<Delta> {
      * risk had lifted. A stale reading is a worse forecast; a false all-clear
      * is a different and much worse kind of wrong.
      */
-    const lightningByDate: Record<string, number> = {
-      ...((await get('forecast'))?.lightningByDate ?? {})
-    }
+    const lightningByDate: Record<string, number> = { ...(previous?.lightningByDate ?? {}) }
     for (const day of await fetchLightning(remaining, days, now)) {
       lightningByDate[day.date] = day.flashesPerKm2
     }
-    // Yesterday's readings are not this walk's, and nothing prunes them
-    // otherwise: the map is keyed by date and would grow without bound.
-    const today = new Date(now).toISOString().slice(0, 10)
     for (const date of Object.keys(lightningByDate)) {
       if (date < today) delete lightningByDate[date]
+    }
+
+    /*
+     * How unusual the fire weather is for this place and season: context for
+     * the fire warning rather than a warning of its own, so it can never raise
+     * or suppress one. Carried across syncs like the lightning readings, though
+     * for a smaller reason. A missing percentile here cannot produce a false
+     * all-clear, because the class and the index are computed on the device and
+     * stand without it; it would only make the extra clause flicker on and off
+     * between syncs, which reads as the record itself changing.
+     */
+    const rankingByDate: Record<string, number> = { ...(previous?.rankingByDate ?? {}) }
+    try {
+      for (const day of await fetchFireRanking(mid.lat, mid.lon, days, now)) {
+        rankingByDate[day.date] = day.percentile
+      }
+    } catch {
+      // Context only; the class and the index stand without it.
+    }
+    for (const date of Object.keys(rankingByDate)) {
+      if (date < today) delete rankingByDate[date]
     }
 
     // Official bulletin, never computed and never a `Warning`: it is regional,
@@ -106,7 +137,8 @@ export async function syncNow(): Promise<Delta> {
       anchorMs,
       metExtras,
       fwiByDate,
-      lightningByDate
+      lightningByDate,
+      rankingByDate
     )
     // Fetching takes seconds, and the track can be replaced meanwhile. Writing
     // this forecast onto a different track would attribute one hike's warnings
@@ -131,6 +163,7 @@ export async function syncNow(): Promise<Delta> {
       met,
       fwiByDate,
       lightningByDate,
+      rankingByDate,
       warnings: next,
       avalanche,
       wildfires

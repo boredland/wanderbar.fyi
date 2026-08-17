@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as AvalancheModule from './avalanche'
 import type * as WeatherModule from './weather'
+import type * as FireRankingModule from './fire-ranking'
 import type * as LightningModule from './lightning'
 import type * as WildfireModule from './wildfire'
 import type { Bulletin } from './avalanche'
@@ -28,6 +29,7 @@ const fetchFwiInputs = vi.hoisted(() => vi.fn())
 const fetchBulletin = vi.hoisted(() => vi.fn())
 const fetchWildfires = vi.hoisted(() => vi.fn())
 const fetchLightning = vi.hoisted(() => vi.fn())
+const fetchFireRanking = vi.hoisted(() => vi.fn())
 
 vi.mock('./weather', async (importOriginal) => ({
   ...(await importOriginal<typeof WeatherModule>()),
@@ -46,6 +48,10 @@ vi.mock('./wildfire', async (importOriginal) => ({
 vi.mock('./lightning', async (importOriginal) => ({
   ...(await importOriginal<typeof LightningModule>()),
   fetchLightning
+}))
+vi.mock('./fire-ranking', async (importOriginal) => ({
+  ...(await importOriginal<typeof FireRankingModule>()),
+  fetchFireRanking
 }))
 
 // Static imports would bind before vi.mock's hoisted factories are installed,
@@ -180,6 +186,7 @@ beforeEach(async () => {
   fetchBulletin.mockResolvedValue(NO_BULLETIN)
   fetchWildfires.mockResolvedValue(NO_FIRES)
   fetchLightning.mockResolvedValue([])
+  fetchFireRanking.mockResolvedValue([])
 })
 
 describe('with no track', () => {
@@ -341,5 +348,45 @@ describe('a failed lightning fetch never reads as the risk lifting', () => {
     fetchLightning.mockResolvedValueOnce([{ date: today, flashesPerKm2: 0.1 }])
     await syncNow()
     expect((await get('forecast'))?.lightningByDate).toEqual({ [today]: 0.1 })
+  })
+})
+
+/**
+ * The percentile is context, so unlike the lightning readings its absence
+ * cannot produce a false all-clear. It is still carried across syncs: a clause
+ * that appears and vanishes between syncs reads as the climate record itself
+ * changing, when all that changed was the connection.
+ */
+describe('the fire-weather percentile survives a sync that could not fetch it', () => {
+  it('keeps the previous percentile and never throws into the sync', async () => {
+    await set('track', track())
+    fetchOpenMeteo.mockResolvedValue(forecastFor(ALL_SEQS))
+
+    const today = new Date(NOW).toISOString().slice(0, 10)
+    fetchFireRanking.mockResolvedValueOnce([{ date: today, percentile: 98.9 }])
+    await syncNow()
+    expect((await get('forecast'))?.rankingByDate).toEqual({ [today]: 98.9 })
+
+    // The service throws outright rather than resolving empty.
+    fetchFireRanking.mockRejectedValueOnce(new Error('offline'))
+    await syncNow()
+
+    expect((await get('forecast'))?.rankingByDate).toEqual({ [today]: 98.9 })
+    // And the sync itself completed: the forecast was still written.
+    expect(await get('lastFetchError')).toBeNull()
+  })
+
+  it('drops readings for days already past, so the map cannot grow forever', async () => {
+    await set('track', track())
+    fetchOpenMeteo.mockResolvedValue(forecastFor(ALL_SEQS))
+
+    const yesterday = new Date(NOW - 86400_000).toISOString().slice(0, 10)
+    const today = new Date(NOW).toISOString().slice(0, 10)
+    fetchFireRanking.mockResolvedValueOnce([
+      { date: yesterday, percentile: 95 },
+      { date: today, percentile: 97 }
+    ])
+    await syncNow()
+    expect((await get('forecast'))?.rankingByDate).toEqual({ [today]: 97 })
   })
 })

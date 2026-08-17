@@ -52,6 +52,12 @@ export type Forecast = {
    * service could not be read, which is not the same as a quiet sky.
    */
   lightningByDate?: Record<string, number>
+  /**
+   * EFFIS fire-weather percentile per UTC date; see ./fire-ranking. Context
+   * for the fire warning only, so its absence changes no class and no
+   * threshold. Absent for forecasts stored before the feature existed.
+   */
+  rankingByDate?: Record<string, number>
   warnings: Warning[]
   /**
    * Official avalanche bulletin, deliberately outside `warnings`: it is

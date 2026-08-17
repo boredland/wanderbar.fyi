@@ -1,5 +1,6 @@
 import type { Waypoint } from './track'
 import { DANGER_ORDER, fireDanger, type FireDanger } from './fwi'
+import { rankingPercentile } from './fire-ranking'
 import { LIGHTNING_ORDER, lightningBand, type LightningBand } from './lightning'
 import type { Hour, SunDay, WaypointForecast } from './weather'
 
@@ -50,7 +51,18 @@ export type Detail =
   | { kind: 'windChill'; feelsC: number; frostbite: FrostbiteBand | null }
   | { kind: 'lyingSnow'; cm: number }
   | { kind: 'heat'; tempC: number }
-  | { kind: 'fire'; danger: FireDanger; fwi: number }
+  | {
+      kind: 'fire'
+      danger: FireDanger
+      fwi: number
+      /**
+       * The percentile of this day against the same date in EFFIS's record,
+       * when it is high enough to be worth saying. Null is the ordinary case:
+       * either the day is unremarkable or the service had nothing, and this is
+       * context rather than a second opinion on the class. See ./fire-ranking.
+       */
+      unusualPct?: number | null
+    }
   | { kind: 'sunrise'; atMs: number }
   | { kind: 'beforeSunrise'; atMs: number }
   | { kind: 'afterSunset'; atMs: number }
@@ -164,7 +176,9 @@ export function evaluateWarnings(
   /** Computed FWI per UTC date (yyyy-mm-dd); see runFwi in ./fwi. */
   fwiByDate: Record<string, number> = {},
   /** Forecast flash density per UTC date; see fetchLightning in ./lightning. */
-  lightningByDate: Record<string, number> = {}
+  lightningByDate: Record<string, number> = {},
+  /** EFFIS fire-weather percentile per UTC date; see ./fire-ranking. */
+  rankingByDate: Record<string, number> = {}
 ): Warning[] {
   const bySeq = new Map(waypoints.map((w) => [w.seq, w]))
   const out: Warning[] = []
@@ -182,11 +196,24 @@ export function evaluateWarnings(
       if (value !== undefined) {
         const danger = fireDanger(value)
         if (DANGER_ORDER[danger] >= DANGER_ORDER[thresholds.fireDanger]) {
+          /*
+           * The percentile is EFFIS's, over its own reanalysis, while the index
+           * beside it is computed here from Open-Meteo history. They are not
+           * the same model and are not reconciled: the class comes from ours,
+           * and this only says how unusual the day is for the place. It never
+           * raises or suppresses a warning, so a missing reading costs nothing.
+           */
+          const percentile = rankingByDate[date]
           out.push({
             seq: wf.seq,
             condition: 'fire',
             forecastHour: etaMs,
-            detail: { kind: 'fire', danger, fwi: value },
+            detail: {
+              kind: 'fire',
+              danger,
+              fwi: value,
+              unusualPct: percentile === undefined ? null : rankingPercentile(percentile)
+            },
             source: 'computed'
           })
         }

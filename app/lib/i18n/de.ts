@@ -213,6 +213,7 @@ export const de: Messages = {
   'detail.heat': '{temp} °C',
   'detail.fire': '{danger}, FWI {fwi}',
   'detail.lightning': '{band}, {flashes} Einschläge/km²',
+  'detail.fireUnusual': 'schlimmer als {pct} % der Tage hier zu dieser Jahreszeit',
   'detail.windChill': 'gefühlt {temp} °C',
   'detail.windChillFrostbite': 'gefühlt {temp} °C, Erfrierungen {band}',
   'detail.sunrise': 'Sonnenaufgang {time}',

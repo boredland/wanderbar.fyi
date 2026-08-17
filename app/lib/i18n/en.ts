@@ -213,6 +213,7 @@ export const en = {
   'detail.heat': '{temp} °C',
   'detail.fire': '{danger}, FWI {fwi}',
   'detail.lightning': '{band}, {flashes} strikes/km²',
+  'detail.fireUnusual': 'worse than {pct}% of days here at this time of year',
   'detail.windChill': 'feels like {temp} °C',
   'detail.windChillFrostbite': 'feels like {temp} °C, frostbite {band}',
   'detail.sunrise': 'sunrise {time}',

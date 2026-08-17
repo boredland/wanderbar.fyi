@@ -229,7 +229,7 @@ describe('fire danger', () => {
   it('warns at and above the configured class', () => {
     const got = run(30)
     expect(got).toHaveLength(1)
-    expect(got[0].detail).toEqual({ kind: 'fire', danger: 'high', fwi: 30 })
+    expect(got[0].detail).toEqual({ kind: 'fire', danger: 'high', fwi: 30, unusualPct: null })
   })
 
   it('respects a stricter threshold', () => {
@@ -263,6 +263,64 @@ describe('fire danger', () => {
  * other about what the strike may set alight, and a day can carry either
  * without the other.
  */
+/**
+ * The percentile is context for the fire warning, not a second opinion on it.
+ * It comes from EFFIS's reanalysis while the class beside it is computed here
+ * from Open-Meteo history, so it must never move the class or the threshold.
+ */
+describe('fire danger in its climatological context', () => {
+  const date = new Date(NOW).toISOString().slice(0, 10)
+  const run = (fwi: number, percentile?: number) =>
+    evaluateWarnings(
+      DEFAULT_THRESHOLDS,
+      forecast(hour()),
+      [wp(0, 0)],
+      0,
+      NOW,
+      {},
+      { [date]: fwi },
+      {},
+      percentile === undefined ? {} : { [date]: percentile }
+    ).filter((w) => w.condition === 'fire')
+
+  it('carries the measured percentile when the day is exceptional', () => {
+    // Rounded down: 98.9 is not "worse than 99%".
+    expect(run(30, 98.918594)[0].detail).toMatchObject({ unusualPct: 98 })
+    expect(run(30, 91)[0].detail).toMatchObject({ unusualPct: 91 })
+  })
+
+  it('says nothing about an ordinary day', () => {
+    // "Worse than 60% of days" is not a fact anyone can act on.
+    expect(run(30, 60)[0].detail).toMatchObject({ unusualPct: null })
+  })
+
+  it('never lets a missing percentile change the warning', () => {
+    const withOut = run(30)
+    const withIn = run(30, 99)
+    expect(withOut).toHaveLength(1)
+    expect(withOut[0].detail).toMatchObject({ danger: 'high', fwi: 30, unusualPct: null })
+    // Same class, same index: only the context line differs.
+    expect(withIn[0].detail).toMatchObject({ danger: 'high', fwi: 30 })
+  })
+
+  it('never raises a warning on the percentile alone', () => {
+    // Below the danger threshold there is no warning to add context to.
+    expect(run(2, 99.9)).toHaveLength(0)
+  })
+
+  it('prints the context after the index, in every language', () => {
+    for (const locale of LOCALES) {
+      const text = detailText(translator(locale), locale, {
+        kind: 'fire',
+        danger: 'high',
+        fwi: 30,
+        unusualPct: 98
+      })
+      expect(text, locale).toContain('98')
+    }
+  })
+})
+
 describe('lightning', () => {
   const date = new Date(NOW).toISOString().slice(0, 10)
   const run = (flashes: number, min = DEFAULT_THRESHOLDS.lightning) =>

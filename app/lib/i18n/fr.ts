@@ -219,6 +219,7 @@ export const fr: Messages = {
   'detail.heat': '{temp} °C',
   'detail.fire': '{danger}, IFM {fwi}',
   'detail.lightning': '{band}, {flashes} impacts/km²',
+  'detail.fireUnusual': "pire que {pct} % des jours ici à cette époque de l'année",
   'detail.windChill': 'ressenti {temp} °C',
   'detail.windChillFrostbite': 'ressenti {temp} °C, gelures {band}',
   'detail.sunrise': 'lever du soleil {time}',

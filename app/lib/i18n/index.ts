@@ -14,6 +14,7 @@ const CATALOGUES: Record<Locale, Messages> = { en, de, fr }
 
 export type Vars = Record<string, string | number>
 
+
 /** Looks up a message and fills its `{placeholders}`. */
 export type T = (key: MessageKey, vars?: Vars) => string
 
@@ -118,11 +119,17 @@ export function detailText(t: T, locale: Locale, d: Detail): string {
         band: t(`lightningBand.${d.band}` as MessageKey),
         flashes: num(locale, d.flashesPerKm2, 1)
       })
-    case 'fire':
-      return t('detail.fire', {
+    case 'fire': {
+      const fire = t('detail.fire', {
         danger: t(`fireDanger.${d.danger}` as MessageKey),
         fwi: num(locale, d.fwi)
       })
+      // Context, appended rather than interpolated: the climatological note is
+      // absent on most days and the sentence has to read without it.
+      return d.unusualPct === null || d.unusualPct === undefined
+        ? fire
+        : `${fire}, ${t('detail.fireUnusual', { pct: num(locale, d.unusualPct) })}`
+    }
     case 'sunrise':
       return t('detail.sunrise', { time: clockAt(locale, d.atMs) })
     case 'beforeSunrise':

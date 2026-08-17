@@ -205,16 +205,28 @@ export const faqEn: FaqEntry[] = [
   {
     q: 'How is fire danger worked out?',
     a: (
-      <p>
-        It is calculated on your device, not fetched: no public service offers a free point
-        forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of
-        Open-Meteo weather history, which is what gives it drought memory rather than
-        judging today alone. Treat it as an indication, and always follow the local fire
-        ban.
-      </p>
+      <>
+        <p>
+          It is calculated on your device, not fetched: no public service offers a free point
+          forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of
+          Open-Meteo weather history, which is what gives it drought memory rather than
+          judging today alone. Treat it as an indication, and always follow the local fire
+          ban.
+        </p>
+        <p>
+          On the worst days it adds how unusual the day is for that place and time of
+          year, from the{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS</A>{' '}
+          record: an index of 60 is a dangerous day in the Alps and an ordinary one in
+          Andalusia, and the number alone cannot tell you which. It appears only in the
+          top tenth of days, and it never moves the danger class. The class is computed
+          here and the percentile is EFFIS&rsquo;s, from a different model, so they are
+          shown side by side rather than merged.
+        </p>
+      </>
     ),
     text:
-      'It is calculated on your device rather than fetched, because no public service offers a free point forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of Open-Meteo weather history, which gives it drought memory rather than judging today alone. Treat it as an indication and always follow the local fire ban.'
+      'It is calculated on your device rather than fetched, because no public service offers a free point forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of Open-Meteo weather history, which gives it drought memory rather than judging today alone. On the worst days it adds how unusual the day is for that place and season, taken from the Copernicus EFFIS record, because an index of 60 is a dangerous day in the Alps and an ordinary one in Andalusia and the number alone cannot tell you which. That figure is only shown in the top tenth of days, and it never changes the danger class: the class is computed here, the percentile is EFFIS\'s, and the two are different models that are deliberately not reconciled. Treat it as an indication and always follow the local fire ban.'
   },
   {
     q: 'Why does it warn about lightning separately from thunderstorms?',
@@ -544,16 +556,28 @@ export const faqDe: FaqEntry[] = [
   {
     q: 'Wie wird die Waldbrandgefahr berechnet?',
     a: (
-      <p>
-        Sie wird auf deinem Gerät berechnet, nicht abgefragt: Kein öffentlicher Dienst
-        bietet dafür eine kostenlose Punktvorhersage. wanderbar rechnet den Canadian Fire
-        Weather Index über 60 Tage Open-Meteo-Wetterhistorie, und genau das gibt ihm
-        Dürre-Gedächtnis statt nur den heutigen Tag zu bewerten. Sieh es als Hinweis und
-        halte dich immer an das lokale Feuerverbot.
-      </p>
+      <>
+        <p>
+          Sie wird auf deinem Gerät berechnet, nicht abgefragt: Kein öffentlicher Dienst
+          bietet dafür eine kostenlose Punktvorhersage. wanderbar rechnet den Canadian Fire
+          Weather Index über 60 Tage Open-Meteo-Wetterhistorie, und genau das gibt ihm
+          Dürre-Gedächtnis statt nur den heutigen Tag zu bewerten. Sieh es als Hinweis und
+          halte dich immer an das lokale Feuerverbot.
+        </p>
+        <p>
+          An den schlimmsten Tagen kommt dazu, wie ungewöhnlich der Tag für diesen Ort und
+          diese Jahreszeit ist, aus den Aufzeichnungen von{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS</A>: Ein
+          Index von 60 ist in den Alpen ein gefährlicher Tag und in Andalusien ein ganz
+          gewöhnlicher, und die Zahl allein sagt dir nicht, welcher von beiden. Der Wert
+          erscheint nur im obersten Zehntel der Tage und verschiebt die Gefahrenstufe nie.
+          Die Stufe wird hier gerechnet, das Perzentil stammt von EFFIS aus einem anderen
+          Modell: Deshalb stehen beide nebeneinander statt vermischt.
+        </p>
+      </>
     ),
     text:
-      'Sie wird auf deinem Gerät berechnet, nicht abgefragt, weil kein öffentlicher Dienst dafür eine kostenlose Punktvorhersage bietet. wanderbar rechnet den Canadian Fire Weather Index über 60 Tage Open-Meteo-Wetterhistorie, und genau das gibt ihm Dürre-Gedächtnis statt nur den heutigen Tag zu bewerten. Sieh es als Hinweis und halte dich immer an das lokale Feuerverbot.'
+      'Sie wird auf deinem Gerät berechnet, nicht abgefragt, weil kein öffentlicher Dienst dafür eine kostenlose Punktvorhersage bietet. wanderbar rechnet den Canadian Fire Weather Index über 60 Tage Open-Meteo-Wetterhistorie, und genau das gibt ihm Dürre-Gedächtnis statt nur den heutigen Tag zu bewerten. An den schlimmsten Tagen kommt dazu, wie ungewöhnlich der Tag für diesen Ort und diese Jahreszeit ist, aus den Aufzeichnungen von Copernicus EFFIS: Ein Index von 60 ist in den Alpen ein gefährlicher Tag und in Andalusien ein gewöhnlicher, und die Zahl allein sagt dir nicht, welcher von beiden. Der Wert erscheint nur im obersten Zehntel der Tage und verschiebt die Gefahrenstufe nie: Die Stufe wird hier gerechnet, das Perzentil stammt von EFFIS aus einem anderen Modell, deshalb stehen beide nebeneinander statt vermischt. Sieh es als Hinweis und halte dich immer an das lokale Feuerverbot.'
   },
   {
     q: 'Warum warnt es vor Blitzen getrennt von Gewittern?',
@@ -887,16 +911,29 @@ export const faqFr: FaqEntry[] = [
   {
     q: "Comment le risque d'incendie est calculé ?",
     a: (
-      <p>
-        C&rsquo;est calculé sur ton appareil, pas récupéré&nbsp;: aucun service public ne propose
-        de prévision ponctuelle gratuite pour ça. wanderbar fait tourner l&rsquo;indice
-        forêt-météo (FWI) canadien sur 60 jours d&rsquo;historique météo Open-Meteo, ce qui lui
-        donne une mémoire de sécheresse au lieu de juger seulement aujourd&rsquo;hui. Prends ça
-        comme une indication, et respecte toujours l&rsquo;interdiction locale de feu.
-      </p>
+      <>
+        <p>
+          C&rsquo;est calculé sur ton appareil, pas récupéré&nbsp;: aucun service public ne propose
+          de prévision ponctuelle gratuite pour ça. wanderbar fait tourner l&rsquo;indice
+          forêt-météo (FWI) canadien sur 60 jours d&rsquo;historique météo Open-Meteo, ce qui lui
+          donne une mémoire de sécheresse au lieu de juger seulement aujourd&rsquo;hui. Prends ça
+          comme une indication, et respecte toujours l&rsquo;interdiction locale de feu.
+        </p>
+        <p>
+          Les pires jours, il ajoute à quel point la journée est inhabituelle pour cet
+          endroit et cette saison, d&rsquo;après les relevés de{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS</A>&nbsp;:
+          un indice de 60 est une journée dangereuse dans les Alpes et une journée
+          ordinaire en Andalousie, et le chiffre seul ne te dit pas laquelle. Il
+          n&rsquo;apparaît que dans le dixième des pires jours et ne déplace jamais le
+          niveau de risque. Le niveau est calculé ici et le centile vient d&rsquo;EFFIS,
+          d&rsquo;un autre modèle&nbsp;: ils sont donc montrés côte à côte plutôt que
+          fondus ensemble.
+        </p>
+      </>
     ),
     text:
-      "C'est calculé sur ton appareil, pas récupéré : aucun service public ne propose de prévision ponctuelle gratuite pour ça. wanderbar fait tourner l'indice forêt-météo (FWI) canadien sur 60 jours d'historique météo Open-Meteo, ce qui lui donne une mémoire de sécheresse au lieu de juger seulement aujourd'hui. Prends ça comme une indication, et respecte toujours l'interdiction locale de feu."
+      "C'est calculé sur ton appareil, pas récupéré : aucun service public ne propose de prévision ponctuelle gratuite pour ça. wanderbar fait tourner l'indice forêt-météo (FWI) canadien sur 60 jours d'historique météo Open-Meteo, ce qui lui donne une mémoire de sécheresse au lieu de juger seulement aujourd'hui. Les pires jours, il ajoute à quel point la journée est inhabituelle pour cet endroit et cette saison, d'après les relevés de Copernicus EFFIS : un indice de 60 est une journée dangereuse dans les Alpes et une journée ordinaire en Andalousie, et le chiffre seul ne te dit pas laquelle. Il n'apparaît que dans le dixième des pires jours et ne déplace jamais le niveau de risque : le niveau est calculé ici et le centile vient d'EFFIS, d'un autre modèle, ils sont donc montrés côte à côte plutôt que fondus ensemble. Prends ça comme une indication, et respecte toujours l'interdiction locale de feu."
   },
   {
     q: "Pourquoi il alerte sur la foudre séparément des orages ?",
