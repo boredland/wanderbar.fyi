@@ -1,3 +1,4 @@
+import { ringsOf, routeToRingsM, type Ring } from './polygon'
 import { bboxOf, haversineM, type Waypoint } from './track'
 
 /**
@@ -47,6 +48,25 @@ export type Hotspot = {
   satellite: string | null
 }
 
+/**
+ * A burnt area: the mapped footprint of a fire, as opposed to a hotspot, which
+ * is a single hot pixel. This is the shape on the ground, so a route can be
+ * beside it or inside it, and `inside` distinguishes those.
+ */
+export type Burn = {
+  /** GWIS's own fire id, stable across the daily re-mapping of a growing fire. */
+  fireId: string | null
+  /** Metres to the nearest edge; 0 when the route enters the area. */
+  distanceM: number
+  /** The route passes through the mapped footprint. */
+  inside: boolean
+  /** Hectares burnt, as mapped so far. */
+  areaHa: number | null
+  /** First and last observation of this fire, epoch ms. */
+  startedAtMs: number | null
+  mappedAtMs: number | null
+}
+
 export type Wildfires = {
   status: WildfireStatus
   /** Nearest first; empty unless status is 'ok'. */
@@ -55,6 +75,19 @@ export type Wildfires = {
   nearestM: number | null
   /** Most recent acquisition among them, or null. */
   latestAtMs: number | null
+  /**
+   * Mapped fire footprints near the route, nearest first.
+   *
+   * Separate from `hotspots` and never merged with them: a hotspot says a
+   * satellite saw heat at an instant, a burn says how much ground has actually
+   * burnt. They are also produced on different cadences, so one can be present
+   * without the other, and an empty list here never means no fire.
+   */
+  burns: Burn[]
+  /** Distance to the nearest mapped footprint, or null when there is none. */
+  nearestBurnM: number | null
+  /** The route crosses a mapped footprint. */
+  insideBurn: boolean
   /**
    * The service had more detections than one response carries, so `hotspots`
    * is a sample and `nearestM` is the nearest *seen*, not the nearest there is.
@@ -98,9 +131,12 @@ const WINDOW_HOURS = 48
  * the latitude correction; exact distance filtering happens locally afterwards,
  * so over-asking here costs only a few kilobytes.
  */
-export function paddedBbox(waypoints: Waypoint[]): [number, number, number, number] {
+export function paddedBbox(
+  waypoints: Waypoint[],
+  radiusM = RADIUS_M
+): [number, number, number, number] {
   const [minLat, minLon, maxLat, maxLon] = bboxOf(waypoints)
-  const padLat = RADIUS_M / 111_320
+  const padLat = radiusM / 111_320
   // Near the poles the cosine correction diverges; clamping keeps the box finite.
   const padLon = padLat / Math.max(0.05, Math.abs(Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180)))
   return [
@@ -126,11 +162,35 @@ export function paddedBbox(waypoints: Waypoint[]): [number, number, number, numb
  */
 const MAX_FEATURES = 500
 
+/**
+ * Burnt areas are polygons, not points, so the same cap would cost far more
+ * bytes. Measured against GWIS: a median footprint carries 13 vertices and
+ * ~590 bytes, the worst seen 77, so 200 is ~120 kB worst case and covers every
+ * mapped fire around a route in the seasons that produce them.
+ */
+const MAX_BURNS = 200
+
+/**
+ * Burnt areas are looked back over two weeks, far longer than the 48 hours used
+ * for hotspots.
+ *
+ * The two answer different questions. A hotspot is only interesting while it is
+ * hot, so a stale one is noise. A burnt area stays relevant after the flames
+ * are out: the path is still closed, the ground is still unstable, and the
+ * fire that mapped it a week ago may well be the fire still burning at its
+ * edge today. Two weeks keeps a season's active fires without dragging in the
+ * whole year's scars.
+ */
+const BURN_WINDOW_HOURS = 336
+
 const empty = (status: WildfireStatus): Wildfires => ({
   status,
   hotspots: [],
   nearestM: null,
   latestAtMs: null,
+  burns: [],
+  nearestBurnM: null,
+  insideBurn: false,
   truncated: false,
   windowHours: WINDOW_HOURS,
   provider: PROVIDER,
@@ -143,6 +203,12 @@ type Feature = {
   properties?: Record<string, unknown> | null
 }
 
+/** A burnt-area feature: same envelope, but the geometry has extent. */
+type AreaFeature = {
+  geometry?: unknown
+  properties?: Record<string, unknown> | null
+}
+
 /** GWIS publishes timestamps as UTC without a zone marker. */
 function parseAcquired(v: unknown): number | null {
   if (typeof v !== 'string' || v === '') return null
@@ -151,7 +217,7 @@ function parseAcquired(v: unknown): number | null {
 }
 
 /** Missing attributes arrive as '', and Number('') is 0, which would read as a real reading of zero. */
-function parseFrp(v: unknown): number | null {
+function parseNumber(v: unknown): number | null {
   if (typeof v === 'number') return Number.isFinite(v) ? v : null
   if (typeof v !== 'string' || v.trim() === '') return null
   const n = Number(v)
@@ -166,7 +232,11 @@ const str = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? 
  * parameter cannot be combined with a temporal predicate, and without the
  * temporal half this returns every fire since 2012.
  */
-function filterXml(bbox: [number, number, number, number], sinceMs: number): string {
+function filterXml(
+  bbox: [number, number, number, number],
+  sinceMs: number,
+  timeField: string
+): string {
   const [minLat, minLon, maxLat, maxLon] = bbox
   const since = new Date(sinceMs).toISOString().slice(0, 19).replace('T', ' ')
   return (
@@ -175,26 +245,51 @@ function filterXml(bbox: [number, number, number, number], sinceMs: number): str
     '<fes:BBOX><fes:ValueReference>geom</fes:ValueReference>' +
     `<gml:Envelope srsName="EPSG:4326"><gml:lowerCorner>${minLat} ${minLon}</gml:lowerCorner>` +
     `<gml:upperCorner>${maxLat} ${maxLon}</gml:upperCorner></gml:Envelope></fes:BBOX>` +
-    '<fes:PropertyIsGreaterThan><fes:ValueReference>acq_at</fes:ValueReference>' +
+    `<fes:PropertyIsGreaterThan><fes:ValueReference>${timeField}</fes:ValueReference>` +
     `<fes:Literal>${since}</fes:Literal></fes:PropertyIsGreaterThan>` +
     '</fes:And></fes:Filter>'
   )
 }
 
-export function requestUrl(bbox: [number, number, number, number], sinceMs: number): string {
+const WFS_BASE = 'https://maps.effis.emergency.copernicus.eu/gwis'
+
+function wfsUrl(
+  typeNames: string,
+  bbox: [number, number, number, number],
+  sinceMs: number,
+  timeField: string,
+  count: number
+): string {
   const q = new URLSearchParams({
     service: 'WFS',
     version: '2.0.0',
     request: 'GetFeature',
-    // `all.hs` is every sensor GWIS ingests: VIIRS on S-NPP, NOAA-20 and
-    // NOAA-21, plus MODIS. More passes per day than any single one of them.
-    typeNames: 'ms:all.hs.query',
+    typeNames,
     outputFormat: 'application/json; subtype=geojson',
     srsName: 'EPSG:4326',
-    count: String(MAX_FEATURES),
-    filter: filterXml(bbox, sinceMs)
+    count: String(count),
+    filter: filterXml(bbox, sinceMs, timeField)
   })
-  return `https://maps.effis.emergency.copernicus.eu/gwis?${q}`
+  return `${WFS_BASE}?${q}`
+}
+
+export function requestUrl(bbox: [number, number, number, number], sinceMs: number): string {
+  // `all.hs` is every sensor GWIS ingests: VIIRS on S-NPP, NOAA-20 and
+  // NOAA-21, plus MODIS. More passes per day than any single one of them.
+  return wfsUrl('ms:all.hs.query', bbox, sinceMs, 'acq_at', MAX_FEATURES)
+}
+
+/**
+ * Burnt areas are filtered on `finaldate`, the last time the fire was observed,
+ * not `initialdate`. A fire that started three weeks ago and is still burning
+ * today is exactly the one a hiker needs, and filtering on its start would drop
+ * it while keeping a small fire that began and ended yesterday.
+ */
+export function burnRequestUrl(
+  bbox: [number, number, number, number],
+  sinceMs: number
+): string {
+  return wfsUrl('ms:nrt.ba.query', bbox, sinceMs, 'finaldate', MAX_BURNS)
 }
 
 /**
@@ -237,12 +332,83 @@ export function readHotspots(
       lon,
       distanceM,
       acquiredAtMs,
-      frpMw: parseFrp(p.frp),
+      frpMw: parseNumber(p.frp),
       confidence: str(p.confidence)?.toLowerCase() ?? null,
       satellite: str(p.satellite)
     })
   }
   return out.sort((a, b) => a.distanceM - b.distanceM)
+}
+
+/**
+ * How far a burnt area may be from the route before it stops being this walk's
+ * problem. Wider than the hotspot radius: a mapped footprint is a known,
+ * durable obstacle rather than a single hot pixel that may be a false positive,
+ * so it is worth naming from further out.
+ */
+const BURN_RADIUS_M = 30_000
+
+export function readBurns(
+  features: AreaFeature[],
+  waypoints: Waypoint[],
+  radiusM = BURN_RADIUS_M
+): Burn[] {
+  const out: Burn[] = []
+  for (const f of features) {
+    const polygons = ringsOf(f.geometry)
+    if (polygons.length === 0) continue
+    const { distanceM, inside } = routeToRingsM(waypoints, polygons)
+    if (!Number.isFinite(distanceM) || distanceM > radiusM) continue
+    const p = f.properties ?? {}
+    out.push({
+      fireId: str(p.fire_id) ?? str(p.id),
+      distanceM,
+      inside,
+      areaHa: parseNumber(p.area_ha),
+      startedAtMs: parseAcquired(p.initialdate),
+      mappedAtMs: parseAcquired(p.finaldate)
+    })
+  }
+  // Inside first, then by distance: a footprint the route crosses outranks a
+  // nearer edge it merely passes.
+  return out.sort((a, b) => Number(b.inside) - Number(a.inside) || a.distanceM - b.distanceM)
+}
+
+/**
+ * Mapped footprints near the route.
+ *
+ * Resolves to an empty list on any failure rather than throwing. The hotspot
+ * leg already decides the overall status, and a burn-area outage must not
+ * downgrade a good hotspot answer to `error`: the two are independent products
+ * and one being down says nothing about the other.
+ */
+type BurnResult = {
+  burns: Burn[]
+  /** The request failed, which is not the same as no burnt areas. */
+  failed: boolean
+  /** The page was full, so a nearer footprint may not have been returned. */
+  truncated: boolean
+}
+
+async function fetchBurns(
+  waypoints: Waypoint[],
+  now: number,
+  signal: AbortSignal
+): Promise<BurnResult> {
+  try {
+    const bbox = paddedBbox(waypoints, BURN_RADIUS_M)
+    const res = await fetch(burnRequestUrl(bbox, now - BURN_WINDOW_HOURS * 3600_000), { signal })
+    if (!res.ok) return { burns: [], failed: true, truncated: false }
+    const json = (await res.json()) as { features?: AreaFeature[] }
+    const features = json.features ?? []
+    return {
+      burns: readBurns(features, waypoints),
+      failed: false,
+      truncated: features.length >= MAX_BURNS
+    }
+  } catch {
+    return { burns: [], failed: true, truncated: false }
+  }
 }
 
 /**
@@ -262,26 +428,70 @@ export async function fetchWildfires(
   const timer = setTimeout(() => ac.abort(), timeoutMs)
   try {
     const url = requestUrl(paddedBbox(waypoints), now - WINDOW_HOURS * 3600_000)
-    const res = await fetch(url, { signal: ac.signal })
-    if (!res.ok) throw new Error(`gwis ${res.status}`)
-    const json = (await res.json()) as { features?: Feature[] }
+    // Both products are asked for at once: they are independent, and running
+    // them in series would double the window in which the abort can fire.
+    // allSettled, not all: a rejected hotspot fetch must not discard burnt
+    // areas that were successfully mapped across the route.
+    const [hotspotRes, burnRes] = await Promise.allSettled([
+      fetch(url, { signal: ac.signal }),
+      fetchBurns(waypoints, now, ac.signal)
+    ])
+
+    const burnOutcome: BurnResult =
+      burnRes.status === 'fulfilled'
+        ? burnRes.value
+        : { burns: [], failed: true, truncated: false }
+    const burns = burnOutcome.burns
+    const burnFields = {
+      burns,
+      nearestBurnM: burns.length > 0 ? burns[0].distanceM : null,
+      insideBurn: burns.some((b) => b.inside)
+    }
+
+    const hotspotsFailed =
+      hotspotRes.status === 'rejected' || !hotspotRes.value.ok
+    /*
+     * A full page from either product means the nearest thing may be one that
+     * did not fit, so no distance claim from either survives it.
+     */
+    let truncated = burnOutcome.truncated
+
+    if (hotspotsFailed) {
+      // The hotspot leg is gone, but any burnt area already mapped is still a
+      // true fact about this route and is reported rather than thrown away.
+      // The status stays 'error' regardless: nobody looked for hotspots, and
+      // burns alone are not an all-clear on fires burning right now.
+      return { ...empty('error'), ...burnFields, truncated, fetchedAtMs: now }
+    }
+
+    const json = (await hotspotRes.value.json()) as { features?: Feature[] }
     const features = json.features ?? []
     // The GeoJSON output carries no numberMatched, so a full page is the only
     // signal that the service had more to give.
-    const truncated = features.length >= MAX_FEATURES
+    truncated = truncated || features.length >= MAX_FEATURES
     const hotspots = readHotspots(features, waypoints)
     if (hotspots.length === 0) {
+      // A mapped footprint is itself a fire near the route, so the answer is
+      // 'ok' even with no hotspot: the satellite has not seen heat in 48 h, but
+      // the ground has burnt and the panel has something true to report.
+      if (burns.length > 0) {
+        return { ...empty('ok'), ...burnFields, truncated, fetchedAtMs: now }
+      }
       // Nothing within the radius, but the box was full: the detections that
       // did not fit could include one that is. Reporting 'none' here would be
       // the all-clear this module exists to avoid.
-      if (truncated) return { ...empty('error'), fetchedAtMs: now }
-      return { ...empty('none'), fetchedAtMs: now }
+      if (truncated) return { ...empty('error'), ...burnFields, fetchedAtMs: now }
+      // The hotspot layer saw nothing, but the burnt-area layer never answered.
+      // 'none' would promise that both looked, so this is an explicit non-answer.
+      if (burnOutcome.failed) return { ...empty('error'), ...burnFields, fetchedAtMs: now }
+      return { ...empty('none'), ...burnFields, fetchedAtMs: now }
     }
     return {
       status: 'ok',
       hotspots,
       nearestM: hotspots[0].distanceM,
       latestAtMs: hotspots.reduce((a, h) => (h.acquiredAtMs > a ? h.acquiredAtMs : a), 0),
+      ...burnFields,
       truncated,
       windowHours: WINDOW_HOURS,
       provider: PROVIDER,

@@ -146,6 +146,17 @@ export const en = {
     '{n} detections in the last {hours} h; the nearest was seen {ago}.',
   'wildfire.withinHour': 'within the hour',
   'wildfire.hoursAgo': '{n} h ago',
+  /*
+   * The burnt area, not the hotspot: a mapped footprint of ground that has
+   * already burnt. "Burnt area" rather than "fire", because the flames may be
+   * out while the closure, the unstable ground and the smoke are not.
+   */
+  'wildfire.burnHead': 'Burnt ground mapped near your route',
+  'wildfire.burnHeadInside': 'Your route crosses a burnt area',
+  'wildfire.burnInside': 'Your route runs through the mapped burnt area.',
+  'wildfire.burnUnderKm': 'A mapped burnt area lies less than 1 km from your route.',
+  'wildfire.burnNear': 'A mapped burnt area lies {km} km from your route.',
+  'wildfire.burnArea': '{ha} ha burnt so far',
   'wildfire.confidence.low': 'low confidence',
   'wildfire.confidence.nominal': 'nominal confidence',
   'wildfire.confidence.high': 'high confidence',
@@ -156,6 +167,8 @@ export const en = {
    */
   'wildfire.caveat':
     'That is where a satellite saw heat, not where the fire is now, and wanderbar cannot tell you which way it is moving.',
+  'wildfire.burnCaveat':
+    'That is where the ground has already burnt, not where the fire is now, and wanderbar cannot tell you which way it is moving.',
   'wildfire.checkYourself': 'Check {link} and local civil protection.',
   'wildfire.head.none': 'No fires detected near this route',
   'wildfire.head.error': 'Could not check for active fires',

@@ -57,7 +57,7 @@ export default function WildfirePanel(props: { wildfires: Wildfires | null; loca
     )
   }
 
-  const nearest = w.hotspots[0]
+  const nearest = w.hotspots[0] ?? null
   const nearKm = (w.nearestM ?? 0) / 1000
   /*
    * Close enough that the walk itself is in question, rather than the view
@@ -65,9 +65,10 @@ export default function WildfirePanel(props: { wildfires: Wildfires | null; loca
    * distance is printed either way so the reader judges for themselves.
    *
    * A truncated response is always treated as close, because the fire that did
-   * not fit in the response could be nearer than the one that did.
+   * not fit in the response could be nearer than the one that did. So is a
+   * route that runs through a mapped burn, where the ground itself has burnt.
    */
-  const close = nearKm <= 5 || w.truncated
+  const close = (nearest !== null && nearKm <= 5) || w.truncated || w.insideBurn
 
   return (
     <section class={`notice ${close ? 'notice-high' : ''}`}>
@@ -77,23 +78,38 @@ export default function WildfirePanel(props: { wildfires: Wildfires | null; loca
           * Waypoint spacing makes this distance approximate, so a detection
           * inside a kilometre is reported as such rather than rounded: "0.0 km"
           * is absurd, and "43 m" claims a precision the sampling cannot carry.
+          *
+          * Walking through burnt ground outranks every distance: a hotspot
+          * 18 km away is a headline about somewhere else, and printing it
+          * above a footprint the route crosses buries the nearer fact.
+          *
+          * With no hotspot at all the headline speaks for the mapped area
+          * instead: the satellite has seen no heat in 48 h, but ground near
+          * this route has burnt, and that is the true sentence to lead with.
           */}
-        {w.truncated
-          ? t('wildfire.manyNearby')
-          : nearKm < 1
-            ? t('wildfire.nearestUnderKm')
-            : t('wildfire.nearest', { km: num(locale, nearKm, 1) })}
+        {w.insideBurn
+          ? t('wildfire.burnHeadInside')
+          : w.truncated
+            ? t('wildfire.manyNearby')
+            : nearest === null
+              ? t('wildfire.burnHead')
+              : nearKm < 1
+                ? t('wildfire.nearestUnderKm')
+                : t('wildfire.nearest', { km: num(locale, nearKm, 1) })}
       </p>
-      <p class="text-sm text-muted">
-        {plural(t, locale, 'wildfire.seen', w.hotspots.length, {
-          hours: w.windowHours,
-          ago: sinceText(t, locale, nearest.acquiredAtMs, w.fetchedAtMs)
-        })}
-        {nearest.satellite ? ` · ${nearest.satellite}` : ''}
-        {nearest.confidence
-          ? ` · ${t(`wildfire.confidence.${nearest.confidence}` as MessageKey)}`
-          : ''}
-      </p>
+      {nearest === null ? null : (
+        <p class="text-sm text-muted">
+          {plural(t, locale, 'wildfire.seen', w.hotspots.length, {
+            hours: w.windowHours,
+            ago: sinceText(t, locale, nearest.acquiredAtMs, w.fetchedAtMs)
+          })}
+          {nearest.satellite ? ` · ${nearest.satellite}` : ''}
+          {nearest.confidence
+            ? ` · ${t(`wildfire.confidence.${nearest.confidence}` as MessageKey)}`
+            : ''}
+        </p>
+      )}
+      <BurnLine wildfires={w} locale={locale} t={t} />
       {/*
        * A hotspot is one pixel that was hot at one moment. Where the fire goes
        * next depends on wind, fuel and terrain that this app does not model,
@@ -101,11 +117,46 @@ export default function WildfirePanel(props: { wildfires: Wildfires | null; loca
        */}
       <p class="text-sm text-muted">
         {w.truncated ? `${t('wildfire.truncated')} ` : ''}
-        {t('wildfire.caveat')} {checkBefore}
+        {/*
+         * With no hotspot behind it the heat caveat would describe something
+         * the panel never showed, so the burn gets its own: a mapped outline
+         * is where the fire has been, which is not where it is going either.
+         */}
+        {nearest === null ? t('wildfire.burnCaveat') : t('wildfire.caveat')} {checkBefore}
         {link}
         {checkAfter}
       </p>
     </section>
+  )
+}
+
+/**
+ * The mapped footprint, when there is one.
+ *
+ * Deliberately a sentence under the hotspot line rather than its own panel: a
+ * reader facing a fire needs one place to look, and the two facts are about the
+ * same fire often enough that separating them would invite reading them as two
+ * fires. When the route runs through a burnt area that outranks any distance,
+ * so it is said first and without a number.
+ */
+function BurnLine(props: { wildfires: Wildfires; locale: Locale; t: T }) {
+  const { wildfires: w, locale, t } = props
+  if (w.burns.length === 0) return null
+  const nearest = w.burns[0]
+
+  const area = nearest.areaHa === null ? null : t('wildfire.burnArea', {
+    ha: num(locale, Math.round(nearest.areaHa))
+  })
+
+  return (
+    <p class="text-sm text-muted">
+      {w.insideBurn
+        ? t('wildfire.burnInside')
+        : nearest.distanceM < 1000
+          ? t('wildfire.burnUnderKm')
+          : t('wildfire.burnNear', { km: num(locale, nearest.distanceM / 1000, 1) })}
+      {area ? ` · ${area}` : ''}
+    </p>
   )
 }
 

@@ -145,11 +145,24 @@ export const de: Messages = {
    * fire: "Vertrauen" would read as the latter. VIIRS publishes low/nominal/
    * high, and "nominal" is the sensor's normal case, not a middling warning.
    */
+  /*
+   * Die Brandfläche, nicht der Hotspot: die kartierte Fläche bereits
+   * verbrannten Bodens. "Brandfläche" statt "Feuer", denn die Flammen können
+   * aus sein, während Sperrung, instabiler Boden und Rauch es nicht sind.
+   */
+  'wildfire.burnHead': 'Verbrannter Boden nahe deiner Route kartiert',
+  'wildfire.burnHeadInside': 'Deine Route führt durch eine Brandfläche',
+  'wildfire.burnInside': 'Deine Route verläuft durch die kartierte Brandfläche.',
+  'wildfire.burnUnderKm': 'Eine kartierte Brandfläche liegt weniger als 1 km von deiner Route entfernt.',
+  'wildfire.burnNear': 'Eine kartierte Brandfläche liegt {km} km von deiner Route entfernt.',
+  'wildfire.burnArea': 'bislang {ha} ha verbrannt',
   'wildfire.confidence.low': 'geringe Zuverlässigkeit',
   'wildfire.confidence.nominal': 'normale Zuverlässigkeit',
   'wildfire.confidence.high': 'hohe Zuverlässigkeit',
   'wildfire.caveat':
     'Dort hat ein Satellit Hitze gesehen, nicht dort ist das Feuer jetzt, und wanderbar kann dir nicht sagen, wohin es zieht.',
+  'wildfire.burnCaveat':
+    'Dort hat der Boden bereits gebrannt, nicht dort ist das Feuer jetzt, und wanderbar kann dir nicht sagen, wohin es zieht.',
   'wildfire.checkYourself': 'Prüfe {link} und den örtlichen Katastrophenschutz.',
   'wildfire.head.none': 'Keine Brände in der Nähe dieser Route entdeckt',
   'wildfire.head.error': 'Aktive Brände konnten nicht geprüft werden',

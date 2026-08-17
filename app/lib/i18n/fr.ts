@@ -151,11 +151,24 @@ export const fr: Messages = {
    * fire: "confiance" alone reads as the latter. VIIRS publishes low/nominal/
    * high, where "nominal" is the sensor's normal case, not a middling warning.
    */
+  /*
+   * La zone brûlée, pas le point chaud : l'empreinte cartographiée d'un sol
+   * déjà brûlé. « Zone brûlée » plutôt que « feu », car les flammes peuvent
+   * être éteintes alors que la fermeture, le sol instable et la fumée, non.
+   */
+  'wildfire.burnHead': 'Terrain brûlé cartographié près de ton itinéraire',
+  'wildfire.burnHeadInside': 'Ton itinéraire traverse une zone brûlée',
+  'wildfire.burnInside': 'Ton itinéraire traverse la zone brûlée cartographiée.',
+  'wildfire.burnUnderKm': "Une zone brûlée cartographiée se trouve à moins d'1 km de ton itinéraire.",
+  'wildfire.burnNear': 'Une zone brûlée cartographiée se trouve à {km} km de ton itinéraire.',
+  'wildfire.burnArea': '{ha} ha brûlés à ce jour',
   'wildfire.confidence.low': 'fiabilité faible',
   'wildfire.confidence.nominal': 'fiabilité normale',
   'wildfire.confidence.high': 'fiabilité élevée',
   'wildfire.caveat':
     "C'est là qu'un satellite a vu de la chaleur, pas là où le feu est maintenant, et wanderbar ne peut pas te dire dans quelle direction il va.",
+  'wildfire.burnCaveat':
+    "C'est là que le sol a déjà brûlé, pas là où le feu est maintenant, et wanderbar ne peut pas te dire dans quelle direction il va.",
   'wildfire.checkYourself': 'Consulte {link} et la protection civile locale.',
   'wildfire.head.none': "Aucun incendie détecté près de cet itinéraire",
   'wildfire.head.error': "Impossible de vérifier les incendies actifs",

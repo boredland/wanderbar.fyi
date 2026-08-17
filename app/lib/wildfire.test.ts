@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Waypoint } from './track'
 import {
+  burnRequestUrl,
   fetchWildfires,
   nearestDistanceM,
   paddedBbox,
+  readBurns,
   readHotspots,
   requestUrl
 } from './wildfire'
@@ -229,18 +231,226 @@ describe('fetchWildfires', () => {
   })
 
   it('asks only for the recent window, so an old burn scar cannot resurface', async () => {
-    let asked = ''
+    // Two requests go out now; this one is about the hotspot window, so it
+    // must pick that URL rather than whichever happened to be fetched last.
+    const asked: string[] = []
     vi.stubGlobal('fetch', async (url: string) => {
-      asked = url
+      asked.push(url)
       return Response.json({ features: [] })
     })
     const now = Date.UTC(2026, 7, 15, 12)
     const w = await fetchWildfires(route, now)
-    const since = new URL(asked).searchParams.get('filter') ?? ''
+    const hotspotUrl =
+      asked.find((u) => new URL(u).searchParams.get('typeNames') === 'ms:all.hs.query') ?? ''
+    const since = new URL(hotspotUrl).searchParams.get('filter') ?? ''
     const expected = new Date(now - w.windowHours * 3600_000)
       .toISOString()
       .slice(0, 19)
       .replace('T', ' ')
     expect(since).toContain(`<fes:Literal>${expected}</fes:Literal>`)
+  })
+})
+
+/**
+ * A burnt-area feature as GWIS serves it: a polygon with a fire id, the window
+ * it was observed over, and the hectares mapped so far.
+ */
+const area = (
+  lat: number,
+  lon: number,
+  props: Record<string, unknown> = {},
+  size = 0.02
+) => ({
+  geometry: {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [lon, lat],
+        [lon + size, lat],
+        [lon + size, lat + size],
+        [lon, lat + size],
+        [lon, lat]
+      ]
+    ]
+  },
+  properties: {
+    id: '15540499',
+    fire_id: '15540499',
+    initialdate: '2026-08-11 21:12:00',
+    finaldate: '2026-08-14 03:19:00',
+    area_ha: '243',
+    ...props
+  }
+})
+
+describe('burnRequestUrl', () => {
+  it('asks the burnt-area layer for fires last seen since the cutoff', () => {
+    const url = new URL(burnRequestUrl([37, 21, 39, 24], Date.UTC(2026, 7, 1)))
+    expect(url.searchParams.get('typeNames')).toBe('ms:nrt.ba.query')
+    const filter = url.searchParams.get('filter') ?? ''
+    // finaldate, not initialdate: a fire that started weeks ago and is still
+    // burning today is exactly the one worth showing.
+    expect(filter).toContain('<fes:ValueReference>finaldate</fes:ValueReference>')
+    expect(filter).toContain('<fes:Literal>2026-08-01 00:00:00</fes:Literal>')
+  })
+})
+
+describe('readBurns', () => {
+  const route = [wp(46.5, 8.0)]
+
+  it('keeps areas within the radius and drops the distant ones', () => {
+    const got = readBurns([area(46.5, 8.0), area(52.0, 8.0)], route)
+    expect(got).toHaveLength(1)
+    expect(got[0].areaHa).toBe(243)
+  })
+
+  it('reports a route inside a footprint as inside, at zero distance', () => {
+    const [burn] = readBurns([area(46.49, 7.99)], route)
+    expect(burn.inside).toBe(true)
+    expect(burn.distanceM).toBe(0)
+  })
+
+  it('puts an area the route crosses ahead of a nearer edge it only passes', () => {
+    const crossed = area(46.49, 7.99, { fire_id: 'crossed' })
+    const beside = area(46.502, 8.0, { fire_id: 'beside' }, 0.001)
+    const got = readBurns([crossed, beside], route)
+    expect(got[0].fireId).toBe('crossed')
+  })
+
+  it('reads both observation times as UTC, which is how GWIS writes them', () => {
+    const [burn] = readBurns([area(46.5, 8.0)], route)
+    expect(burn.startedAtMs).toBe(Date.UTC(2026, 7, 11, 21, 12, 0))
+    expect(burn.mappedAtMs).toBe(Date.UTC(2026, 7, 14, 3, 19, 0))
+  })
+
+  it('survives missing attributes rather than reporting a zero-hectare fire', () => {
+    const [burn] = readBurns([area(46.5, 8.0, { area_ha: '', fire_id: '' })], route)
+    expect(burn.areaHa).toBeNull()
+    // Falls back to the feature id, which is always present.
+    expect(burn.fireId).toBe('15540499')
+  })
+
+  it('ignores features whose geometry cannot be read', () => {
+    expect(readBurns([{ geometry: null, properties: {} }], route)).toEqual([])
+  })
+})
+
+/**
+ * The two products are independent: they are mapped on different cadences by
+ * different pipelines. Neither one's silence or failure may be reported as the
+ * other's answer.
+ */
+describe('burnt areas and hotspots stay independent', () => {
+  const route = [wp(46.5, 8.0)]
+
+  const routeTo = (hotspots: unknown[], areas: unknown[]) => async (url: string) =>
+    Response.json({
+      features: new URL(url).searchParams.get('typeNames') === 'ms:nrt.ba.query'
+        ? areas
+        : hotspots
+    })
+
+  it('reports a mapped burn even when no satellite saw heat in the window', () => {
+    // Not 'none': ground near this route has burnt, which is a true and
+    // reportable fact even with no hotspot behind it.
+    return (async () => {
+      vi.stubGlobal('fetch', routeTo([], [area(46.5, 8.0)]))
+      const w = await fetchWildfires(route)
+      expect(w.status).toBe('ok')
+      expect(w.hotspots).toEqual([])
+      expect(w.burns).toHaveLength(1)
+      expect(w.nearestBurnM).toBe(0)
+      expect(w.insideBurn).toBe(true)
+    })()
+  })
+
+  it('still reports "none" when neither product has anything', async () => {
+    vi.stubGlobal('fetch', routeTo([], []))
+    const w = await fetchWildfires(route)
+    expect(w.status).toBe('none')
+    expect(w.burns).toEqual([])
+    expect(w.nearestBurnM).toBeNull()
+  })
+
+  it('keeps the hotspot answer when the burnt-area layer fails', async () => {
+    vi.stubGlobal('fetch', async (url: string) =>
+      new URL(url).searchParams.get('typeNames') === 'ms:nrt.ba.query'
+        ? new Response('boom', { status: 502 })
+        : Response.json({ features: [feature(46.51, 8.0)] })
+    )
+    const w = await fetchWildfires(route)
+    expect(w.status).toBe('ok')
+    expect(w.hotspots).toHaveLength(1)
+    expect(w.burns).toEqual([])
+  })
+
+  it('never reports a burn distance when the whole fetch failed', async () => {
+    vi.stubGlobal('fetch', async () => new Response('boom', { status: 500 }))
+    const w = await fetchWildfires(route)
+    expect(w.status).toBe('error')
+    expect(w.burns).toEqual([])
+    expect(w.nearestBurnM).toBeNull()
+    expect(w.insideBurn).toBe(false)
+  })
+})
+
+/**
+ * Regressions from an adversarial review of the burnt-area work. Each of these
+ * is a way the two products could have been made to lie about one another.
+ */
+describe('one product failing never speaks for the other', () => {
+  const route = [wp(46.5, 8.0)]
+
+  it('keeps mapped burns when the hotspot layer fails, but still says error', async () => {
+    vi.stubGlobal('fetch', async (url: string) =>
+      new URL(url).searchParams.get('typeNames') === 'ms:nrt.ba.query'
+        ? Response.json({ features: [area(46.49, 7.99)] })
+        : new Response('boom', { status: 502 })
+    )
+    const w = await fetchWildfires(route)
+    // Nobody looked for hotspots, so this is not 'ok'...
+    expect(w.status).toBe('error')
+    // ...but a footprint the route crosses is still a fact worth carrying.
+    expect(w.burns).toHaveLength(1)
+    expect(w.insideBurn).toBe(true)
+  })
+
+  it('refuses to report "none" when the burnt-area layer never answered', async () => {
+    vi.stubGlobal('fetch', async (url: string) =>
+      new URL(url).searchParams.get('typeNames') === 'ms:nrt.ba.query'
+        ? new Response('boom', { status: 502 })
+        : Response.json({ features: [] })
+    )
+    const w = await fetchWildfires(route)
+    // 'none' would promise both layers looked and saw nothing. Only one did.
+    expect(w.status).toBe('error')
+  })
+
+  it('flags truncation when the burnt-area page is full, so no distance is a clearance', async () => {
+    const many = Array.from({ length: 200 }, () => area(52.0, 8.0))
+    vi.stubGlobal('fetch', async (url: string) =>
+      new URL(url).searchParams.get('typeNames') === 'ms:nrt.ba.query'
+        ? Response.json({ features: many })
+        : Response.json({ features: [feature(46.51, 8.0)] })
+    )
+    const w = await fetchWildfires(route)
+    expect(w.truncated).toBe(true)
+  })
+
+  it('asks the burnt-area layer over its own wider radius, not the hotspot one', async () => {
+    const asked: string[] = []
+    vi.stubGlobal('fetch', async (url: string) => {
+      asked.push(url)
+      return Response.json({ features: [] })
+    })
+    await fetchWildfires(route)
+    const box = (typeNames: string) => {
+      const url = asked.find((u) => new URL(u).searchParams.get('typeNames') === typeNames) ?? ''
+      const filter = new URL(url).searchParams.get('filter') ?? ''
+      const m = filter.match(/<gml:lowerCorner>([-\d.]+) /)
+      return Number(m?.[1])
+    }
+    // A wider radius means a lower southern edge; 30 km against 20 km.
+    expect(box('ms:nrt.ba.query')).toBeLessThan(box('ms:all.hs.query'))
   })
 })
