@@ -25,7 +25,7 @@ const PUSH_HOSTS = [
   'notify.windows.com'
 ]
 
-export function isPushEndpoint(value: unknown): boolean {
+export function isPushEndpoint(value: unknown): value is string {
   if (typeof value !== 'string' || value.length === 0) return false
 
   let url: URL

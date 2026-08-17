@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { notifyDelta } from '../lib/notify'
 import { get } from '../lib/store'
+import { stopWake } from '../lib/wake'
 import { syncNow } from '../lib/sync'
 import { PRECACHE } from './precache'
 
@@ -179,9 +180,14 @@ self.addEventListener('notificationclick', (e) => {
 
 self.addEventListener('push', (e) => e.waitUntil(handleWake()))
 
-self.addEventListener('pushsubscriptionchange', (e) =>
-  (e as ExtendableEvent).waitUntil(resubscribe())
-)
+self.addEventListener('pushsubscriptionchange', (e) => {
+  // The old endpoint is handed over so its Durable Object can be retired: it
+  // is keyed by endpoint, and a rotated subscription would otherwise leave an
+  // instance behind, armed and pushing at an endpoint nobody reads.
+  const old = (e as ExtendableEvent & { oldSubscription?: PushSubscription | null })
+    .oldSubscription
+  ;(e as ExtendableEvent).waitUntil(resubscribe(old?.endpoint))
+})
 
 async function handleWake(): Promise<void> {
   // A push MUST end in a visible notification: Chrome otherwise shows
@@ -207,28 +213,43 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return out
 }
 
-async function resubscribe(): Promise<void> {
+async function resubscribe(oldEndpoint?: string): Promise<void> {
   // The key is read from IndexedDB rather than inlined at build time, so the
   // worker needs no build-time substitution.
   const [key, schedule] = await Promise.all([get('vapidPublicKey'), get('schedule')])
   if (!key) return
+  // A rotation is not consent. If the reader has notifications off, the browser
+  // rotating their subscription must not quietly switch them back on.
+  if (!schedule.enabled) {
+    if (oldEndpoint) await stopWake(oldEndpoint)
+    return
+  }
 
   const sub = await self.registration.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(key)
   })
   const json = sub.toJSON()
-  await fetch('/api/wake', {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      endpoint: sub.endpoint,
-      p256dh: json.keys?.p256dh,
-      auth: json.keys?.auth,
-      intervalH: schedule.intervalH,
-      startH: schedule.startH,
-      endH: schedule.endH,
-      tz: schedule.tz
+  try {
+    await fetch('/api/wake', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: sub.endpoint,
+        p256dh: json.keys?.p256dh,
+        auth: json.keys?.auth,
+        intervalH: schedule.intervalH,
+        startH: schedule.startH,
+        endH: schedule.endH,
+        tz: schedule.tz
+      })
     })
-  })
+  } finally {
+    // Retire the instance the old endpoint was keyed by even if registering the
+    // new one failed: the browser has already replaced that endpoint, so the
+    // old instance would otherwise keep an alarm armed and push at an address
+    // nobody reads. The new subscription is recoverable — the page re-registers
+    // it on the next visit — but an orphaned alarm is not.
+    if (oldEndpoint && oldEndpoint !== sub.endpoint) await stopWake(oldEndpoint)
+  }
 }

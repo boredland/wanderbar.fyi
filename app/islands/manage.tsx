@@ -3,6 +3,7 @@ import { useLocale, type MessageKey } from '../lib/i18n'
 import type { Locale } from '../lib/i18n/locale'
 import { clearNotifications, notifyDelta } from '../lib/notify'
 import { clearTrack, get, set, type Track } from '../lib/store'
+import { currentEndpoint, stopWake } from '../lib/wake'
 import { syncNow } from '../lib/sync'
 import {
   applyPace,
@@ -80,8 +81,9 @@ export default function Manage(props: { locale: Locale }) {
     if (!confirm(t('manage.confirmDelete', { name: track.name }))) return
     await clearTrack()
     await clearNotifications()
-    // A schedule with no track would wake the app to sync nothing.
-    await fetch('/api/wake', { method: 'DELETE' })
+    // A schedule with no track would wake the app to sync nothing. Named by
+    // endpoint: the server keys one Durable Object per subscription.
+    await stopWake(await currentEndpoint())
     const schedule = await get('schedule')
     await set('schedule', { ...schedule, enabled: false })
     await reload()

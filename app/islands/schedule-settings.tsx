@@ -4,6 +4,7 @@ import type { Locale } from '../lib/i18n/locale'
 import { requestPermission } from '../lib/notify'
 import { DEFAULT_SCHEDULE, type Schedule } from '../lib/schedule'
 import { get, set } from '../lib/store'
+import { currentEndpoint, stopWake } from '../lib/wake'
 
 const INTERVALS = [1, 2, 3, 4, 6, 8, 12]
 const HOURS = Array.from({ length: 24 }, (_, h) => h)
@@ -44,7 +45,15 @@ export default function ScheduleSettings(props: { vapidPublicKey: string; locale
       setS(next)
       await set('schedule', next)
       if (!next.enabled) {
-        await fetch('/api/wake', { method: 'DELETE' })
+        // Only when it was on. Adjusting an interval with notifications already
+        // off is a local preference, and firing a DELETE for it would wake a
+        // Durable Object per dropdown change to stop something already stopped.
+        if (s.enabled) {
+          // Name the subscription being stopped: the server keys one instance
+          // per endpoint, so an unaddressed DELETE would either miss or, as it
+          // once did, stop everyone's.
+          await stopWake(await currentEndpoint())
+        }
         setStatus(t('schedule.off'))
         dispatchEvent(new Event('wanderbar:changed'))
         return
