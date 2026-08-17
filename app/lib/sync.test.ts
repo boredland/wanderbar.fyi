@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as AvalancheModule from './avalanche'
 import type * as WeatherModule from './weather'
+import type * as LightningModule from './lightning'
 import type * as WildfireModule from './wildfire'
 import type { Bulletin } from './avalanche'
 import type { Track } from './store'
@@ -26,6 +27,7 @@ const fetchMet = vi.hoisted(() => vi.fn())
 const fetchFwiInputs = vi.hoisted(() => vi.fn())
 const fetchBulletin = vi.hoisted(() => vi.fn())
 const fetchWildfires = vi.hoisted(() => vi.fn())
+const fetchLightning = vi.hoisted(() => vi.fn())
 
 vi.mock('./weather', async (importOriginal) => ({
   ...(await importOriginal<typeof WeatherModule>()),
@@ -40,6 +42,10 @@ vi.mock('./avalanche', async (importOriginal) => ({
 vi.mock('./wildfire', async (importOriginal) => ({
   ...(await importOriginal<typeof WildfireModule>()),
   fetchWildfires
+}))
+vi.mock('./lightning', async (importOriginal) => ({
+  ...(await importOriginal<typeof LightningModule>()),
+  fetchLightning
 }))
 
 // Static imports would bind before vi.mock's hoisted factories are installed,
@@ -173,6 +179,7 @@ beforeEach(async () => {
   fetchFwiInputs.mockRejectedValue(new Error('fwi unavailable'))
   fetchBulletin.mockResolvedValue(NO_BULLETIN)
   fetchWildfires.mockResolvedValue(NO_FIRES)
+  fetchLightning.mockResolvedValue([])
 })
 
 describe('with no track', () => {
@@ -296,5 +303,43 @@ describe('a waypoint the hiker has walked past', () => {
     const second = await syncNow()
 
     expect(second.cleared.map((w) => `${w.seq}:${w.condition}`)).toEqual(['8:wind'])
+  })
+})
+
+/**
+ * A reading that could not be fetched is not a reading of zero. `diffWarnings`
+ * treats a warning that vanished as one that cleared, and clearing is what
+ * sends "the risk has lifted" to a lock screen, so a dropped connection must
+ * not be able to produce that sentence.
+ */
+describe('a failed lightning fetch never reads as the risk lifting', () => {
+  it('keeps the previous reading when the service cannot be reached', async () => {
+    await set('track', track())
+    fetchOpenMeteo.mockResolvedValue(forecastFor(ALL_SEQS))
+
+    const today = new Date(NOW).toISOString().slice(0, 10)
+    fetchLightning.mockResolvedValueOnce([{ date: today, flashesPerKm2: 9 }])
+    await syncNow()
+    expect((await get('forecast'))?.lightningByDate).toEqual({ [today]: 9 })
+
+    // Now the service is down and answers for no day at all.
+    fetchLightning.mockResolvedValueOnce([])
+    const delta = await syncNow()
+
+    // The reading survives, so the warning does, so nothing "cleared".
+    expect((await get('forecast'))?.lightningByDate).toEqual({ [today]: 9 })
+    expect(delta.cleared.filter((w) => w.condition === 'lightning')).toEqual([])
+  })
+
+  it('replaces a carried reading as soon as the service answers again', async () => {
+    await set('track', track())
+    fetchOpenMeteo.mockResolvedValue(forecastFor(ALL_SEQS))
+
+    const today = new Date(NOW).toISOString().slice(0, 10)
+    fetchLightning.mockResolvedValueOnce([{ date: today, flashesPerKm2: 9 }])
+    await syncNow()
+    fetchLightning.mockResolvedValueOnce([{ date: today, flashesPerKm2: 0.1 }])
+    await syncNow()
+    expect((await get('forecast'))?.lightningByDate).toEqual({ [today]: 0.1 })
   })
 })

@@ -1,5 +1,6 @@
 import type { Waypoint } from './track'
 import { DANGER_ORDER, fireDanger, type FireDanger } from './fwi'
+import { LIGHTNING_ORDER, lightningBand, type LightningBand } from './lightning'
 import type { Hour, SunDay, WaypointForecast } from './weather'
 
 export type Condition =
@@ -12,6 +13,7 @@ export type Condition =
   | 'thunderstorm'
   | 'darkness'
   | 'fire'
+  | 'lightning'
   | 'ice'
   | 'coldwind'
   | 'deepsnow'
@@ -21,7 +23,7 @@ export type Condition =
  * weather code, by MET's thunder probability, or by both, and fire danger is
  * computed here rather than fetched from anyone. The rest is Open-Meteo.
  */
-export type Source = 'open-meteo' | 'met' | 'open-meteo+met' | 'computed'
+export type Source = 'open-meteo' | 'met' | 'open-meteo+met' | 'computed' | 'effis'
 
 /**
  * The measured facts behind a warning, not a sentence about them.
@@ -36,6 +38,7 @@ export type Source = 'open-meteo' | 'met' | 'open-meteo+met' | 'computed'
  * shape cannot affect which notifications fire.
  */
 export type Detail =
+  | { kind: 'lightning'; band: LightningBand; flashesPerKm2: number }
   | { kind: 'rainRate'; mmPerH: number }
   | { kind: 'hailPossible' }
   | { kind: 'gusts'; gustKmh: number }
@@ -77,6 +80,8 @@ export type Thresholds = {
   rainMm: number
   /** Minimum official danger class that warrants a warning. */
   fireDanger: FireDanger
+  /** Minimum EFFIS lightning band that warrants a warning. */
+  lightning: LightningBand
   /** Wind chill at or below this warrants a warning. */
   windChillC: number
   /** Lying snow at or above this warrants a warning, metres. */
@@ -94,6 +99,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
     thunderstorm: true,
     darkness: true,
     fire: true,
+    lightning: true,
     ice: true,
     coldwind: true,
     deepsnow: true
@@ -102,6 +108,13 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   windKmh: 50,
   rainMm: 2,
   fireDanger: 'high',
+  /*
+   * EFFIS renders anything under 0.25 flashes/km2 as blank, and its own bands
+   * start there. 'high' is 2.5 and up, which is where an afternoon carries
+   * enough cloud-to-ground strikes to start something in dry fuel rather than
+   * simply rumble.
+   */
+  lightning: 'high',
   /*
    * Environment Canada calls -28 the onset of frostbite in 10-30 min, but the
    * band above it is already "risk of hypothermia without adequate clothing",
@@ -149,7 +162,9 @@ export function evaluateWarnings(
   anchorMs: number,
   metExtras: Record<number, MetExtras> = {},
   /** Computed FWI per UTC date (yyyy-mm-dd); see runFwi in ./fwi. */
-  fwiByDate: Record<string, number> = {}
+  fwiByDate: Record<string, number> = {},
+  /** Forecast flash density per UTC date; see fetchLightning in ./lightning. */
+  lightningByDate: Record<string, number> = {}
 ): Warning[] {
   const bySeq = new Map(waypoints.map((w) => [w.seq, w]))
   const out: Warning[] = []
@@ -173,6 +188,30 @@ export function evaluateWarnings(
             forecastHour: etaMs,
             detail: { kind: 'fire', danger, fwi: value },
             source: 'computed'
+          })
+        }
+      }
+    }
+
+    /*
+     * Lightning is daily and gridded like the fire danger, so it attaches to
+     * the waypoint's day rather than the hourly window. It is deliberately not
+     * folded into the thunderstorm warning: that one is about being caught out
+     * in a storm, this one is about what the storm may set alight, and a day
+     * can carry either without the other.
+     */
+    if (thresholds.enabled.lightning) {
+      const date = new Date(etaMs).toISOString().slice(0, 10)
+      const flashes = lightningByDate[date]
+      if (flashes !== undefined) {
+        const band = lightningBand(flashes)
+        if (band && LIGHTNING_ORDER[band] >= LIGHTNING_ORDER[thresholds.lightning]) {
+          out.push({
+            seq: wf.seq,
+            condition: 'lightning',
+            forecastHour: etaMs,
+            detail: { kind: 'lightning', band, flashesPerKm2: flashes },
+            source: 'effis'
           })
         }
       }

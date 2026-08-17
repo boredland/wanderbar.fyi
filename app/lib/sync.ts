@@ -1,5 +1,6 @@
 import { fetchBulletin } from './avalanche'
 import { runFwi } from './fwi'
+import { fetchLightning } from './lightning'
 import { get, set } from './store'
 import { estimatePosition, startAnchorMs } from './track'
 import { diffWarnings, evaluateWarnings, type Delta, type MetExtras } from './warnings'
@@ -59,6 +60,32 @@ export async function syncNow(): Promise<Delta> {
       // No fire data this sync; every other warning still stands.
     }
 
+    /*
+     * Forecast lightning, which is an ignition risk rather than a storm
+     * warning: see ./lightning for why it is not folded into `thunderstorm`.
+     * Like the FWI it must never gate the sync, so a failure leaves every
+     * other warning standing.
+     *
+     * Days the service could not answer for keep their previous reading rather
+     * than falling out. Dropping them would delete the warning they raised,
+     * and `diffWarnings` reads a warning that disappeared as one that cleared:
+     * a dropped connection would tell the hiker by push that the lightning
+     * risk had lifted. A stale reading is a worse forecast; a false all-clear
+     * is a different and much worse kind of wrong.
+     */
+    const lightningByDate: Record<string, number> = {
+      ...((await get('forecast'))?.lightningByDate ?? {})
+    }
+    for (const day of await fetchLightning(remaining, days, now)) {
+      lightningByDate[day.date] = day.flashesPerKm2
+    }
+    // Yesterday's readings are not this walk's, and nothing prunes them
+    // otherwise: the map is keyed by date and would grow without bound.
+    const today = new Date(now).toISOString().slice(0, 10)
+    for (const date of Object.keys(lightningByDate)) {
+      if (date < today) delete lightningByDate[date]
+    }
+
     // Official bulletin, never computed and never a `Warning`: it is regional,
     // and unlike every weather condition its absence is not an all-clear. It
     // must not gate the sync, but a failure here still has to reach the screen
@@ -78,7 +105,8 @@ export async function syncNow(): Promise<Delta> {
       currentSeq,
       anchorMs,
       metExtras,
-      fwiByDate
+      fwiByDate,
+      lightningByDate
     )
     // Fetching takes seconds, and the track can be replaced meanwhile. Writing
     // this forecast onto a different track would attribute one hike's warnings
@@ -102,6 +130,7 @@ export async function syncNow(): Promise<Delta> {
       waypoints,
       met,
       fwiByDate,
+      lightningByDate,
       warnings: next,
       avalanche,
       wildfires

@@ -130,6 +130,7 @@ describe('warning detail copy', () => {
     'thunderstorm',
     'darkness',
     'fire',
+    'lightning',
     'ice',
     'coldwind',
     'deepsnow'
@@ -252,6 +253,89 @@ describe('fire danger', () => {
     expect(
       evaluateWarnings(t, forecast(hour()), [wp(0, 0)], 0, NOW, {}, { [date]: 99 })
         .filter((w) => w.condition === 'fire')
+    ).toHaveLength(0)
+  })
+})
+
+/**
+ * Lightning is an ignition risk, not a storm warning. It is kept apart from
+ * `thunderstorm` on purpose: one is about the hiker caught out on a ridge, the
+ * other about what the strike may set alight, and a day can carry either
+ * without the other.
+ */
+describe('lightning', () => {
+  const date = new Date(NOW).toISOString().slice(0, 10)
+  const run = (flashes: number, min = DEFAULT_THRESHOLDS.lightning) =>
+    evaluateWarnings(
+      { ...DEFAULT_THRESHOLDS, lightning: min },
+      forecast(hour()),
+      [wp(0, 0)],
+      0,
+      NOW,
+      {},
+      {},
+      { [date]: flashes }
+    ).filter((w) => w.condition === 'lightning')
+
+  it('stays quiet below the configured band', () => {
+    // Default threshold is 'high', which EFFIS puts at 2.5 flashes/km2.
+    expect(run(1.2)).toHaveLength(0)
+  })
+
+  it('warns at and above the configured band', () => {
+    const got = run(3.0)
+    expect(got).toHaveLength(1)
+    expect(got[0].detail).toEqual({ kind: 'lightning', band: 'high', flashesPerKm2: 3.0 })
+    expect(got[0].source).toBe('effis')
+  })
+
+  it('respects a stricter and a looser threshold', () => {
+    expect(run(3.0, 'extreme')).toHaveLength(0)
+    expect(run(20, 'extreme')[0].detail).toMatchObject({ band: 'extreme' })
+    expect(run(1.2, 'low')[0].detail).toMatchObject({ band: 'low' })
+  })
+
+  /**
+   * A quiet reading and no reading are different facts. Below the lowest band
+   * EFFIS draws nothing, so wanderbar says nothing either, and a day the
+   * service never answered for must not become a quiet day.
+   */
+  it('says nothing where EFFIS itself draws nothing', () => {
+    expect(run(0.1, 'very low')).toHaveLength(0)
+  })
+
+  it('stays quiet when no reading exists for that day', () => {
+    expect(
+      evaluateWarnings(DEFAULT_THRESHOLDS, forecast(hour()), [wp(0, 0)], 0, NOW, {}, {}, {})
+        .filter((w) => w.condition === 'lightning')
+    ).toHaveLength(0)
+  })
+
+  it('is independent of the thunderstorm warning', () => {
+    // A calm-looking hour with lightning forecast still raises lightning, and
+    // raises it alone.
+    const got = evaluateWarnings(
+      DEFAULT_THRESHOLDS,
+      forecast(hour()),
+      [wp(0, 0)],
+      0,
+      NOW,
+      {},
+      {},
+      { [date]: 6 }
+    )
+    expect(got.filter((w) => w.condition === 'lightning')).toHaveLength(1)
+    expect(got.filter((w) => w.condition === 'thunderstorm')).toHaveLength(0)
+  })
+
+  it('honours the disabled toggle', () => {
+    const t = {
+      ...DEFAULT_THRESHOLDS,
+      enabled: { ...DEFAULT_THRESHOLDS.enabled, lightning: false }
+    }
+    expect(
+      evaluateWarnings(t, forecast(hour()), [wp(0, 0)], 0, NOW, {}, {}, { [date]: 99 })
+        .filter((w) => w.condition === 'lightning')
     ).toHaveLength(0)
   })
 })

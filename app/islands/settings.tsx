@@ -5,6 +5,7 @@ import { notifyDelta } from '../lib/notify'
 import { get, set } from '../lib/store'
 import { syncNow } from '../lib/sync'
 import type { FireDanger } from '../lib/fwi'
+import type { LightningBand } from '../lib/lightning'
 import { DEFAULT_THRESHOLDS, type Condition, type Thresholds } from '../lib/warnings'
 
 const CONDITIONS: Condition[] = [
@@ -17,6 +18,7 @@ const CONDITIONS: Condition[] = [
   'thunderstorm',
   'darkness',
   'fire',
+  'lightning',
   'ice',
   'coldwind',
   'deepsnow'
@@ -109,6 +111,23 @@ export default function Settings(props: { locale: Locale }) {
           {(['moderate', 'high', 'very high', 'extreme'] as FireDanger[]).map((d) => (
             <option key={d} value={d} selected={d === t.fireDanger}>
               {msg(`fireDanger.${d}` as MessageKey)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label class="flex items-center justify-between gap-4">
+        <span class="text-sm">{msg('settings.lightningFrom')}</span>
+        <select
+          class="field"
+          disabled={!t.enabled.lightning}
+          value={t.lightning}
+          onChange={(e) =>
+            persist({ ...t, lightning: (e.target as HTMLSelectElement).value as LightningBand })
+          }
+        >
+          {(['low', 'moderate', 'high', 'very high', 'extreme'] as LightningBand[]).map((d) => (
+            <option key={d} value={d} selected={d === t.lightning}>
+              {msg(`lightningBand.${d}` as MessageKey)}
             </option>
           ))}
         </select>

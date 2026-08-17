@@ -192,6 +192,7 @@ export const en = {
   'condition.thunderstorm': 'Thunderstorm',
   'condition.darkness': 'Darkness',
   'condition.fire': 'Fire danger',
+  'condition.lightning': 'Dry lightning',
   'condition.ice': 'Freezing rain',
   'condition.coldwind': 'Wind chill',
   'condition.deepsnow': 'Deep snow',
@@ -199,6 +200,7 @@ export const en = {
   'source.open-meteo': 'Open-Meteo',
   'source.met': 'MET',
   'source.open-meteo+met': 'Open-Meteo + MET',
+  'source.effis': 'Copernicus EFFIS',
   'source.computed': 'computed here',
 
   'detail.rainRate': '{mm} mm/h',
@@ -210,6 +212,7 @@ export const en = {
   'detail.lyingSnow': '{cm} cm lying',
   'detail.heat': '{temp} °C',
   'detail.fire': '{danger}, FWI {fwi}',
+  'detail.lightning': '{band}, {flashes} strikes/km²',
   'detail.windChill': 'feels like {temp} °C',
   'detail.windChillFrostbite': 'feels like {temp} °C, frostbite {band}',
   'detail.sunrise': 'sunrise {time}',
@@ -217,6 +220,16 @@ export const en = {
   'detail.afterSunset': 'after sunset {time}',
   'detail.dusk': 'dusk, sunset {time}',
 
+  /*
+   * EFFIS's own legend wording for the lightning layer, so a reader comparing
+   * wanderbar against the EFFIS map finds the same words.
+   */
+  'lightningBand.very low': 'very low',
+  'lightningBand.low': 'low',
+  'lightningBand.moderate': 'moderate',
+  'lightningBand.high': 'high',
+  'lightningBand.very high': 'very high',
+  'lightningBand.extreme': 'extreme',
   'frostbite.under2': 'under 2 min',
   'frostbite.2to5': '2-5 min',
   'frostbite.5to10': '5-10 min',
@@ -278,6 +291,7 @@ export const en = {
   'manage.delete': 'Delete this track',
   'manage.confirmDelete': 'Delete “{name}”?',
 
+  'settings.lightningFrom': 'Lightning from',
   'settings.fireDangerFrom': 'Fire danger from',
   'settings.heatAbove': 'Heat above (°C)',
   'settings.windChillBelow': 'Wind chill below (°C)',

@@ -46,7 +46,16 @@ describe('wmoIcon', () => {
 
 describe('condition copy', () => {
   it('labels every condition in every language, so severity is never colour-only', () => {
-    const all: Condition[] = ['rain', 'hail', 'wind', 'snow', 'heat', 'blizzard', 'thunderstorm']
+    const all: Condition[] = [
+      'rain',
+      'hail',
+      'wind',
+      'snow',
+      'heat',
+      'blizzard',
+      'thunderstorm',
+      'lightning'
+    ]
     for (const locale of LOCALES) {
       const t = translator(locale)
       for (const c of all) expect(t(`condition.${c}` as MessageKey), `${locale}/${c}`).toBeTruthy()

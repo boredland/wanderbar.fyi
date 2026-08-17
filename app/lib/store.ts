@@ -46,6 +46,12 @@ export type Forecast = {
   met: Record<number, Hour[]>
   /** Computed FWI per UTC date; see runFwi in ./fwi. */
   fwiByDate: Record<string, number>
+  /**
+   * Forecast flash density per UTC date; see fetchLightning in ./lightning.
+   * Absent for forecasts stored before the feature existed, and empty when the
+   * service could not be read, which is not the same as a quiet sky.
+   */
+  lightningByDate?: Record<string, number>
   warnings: Warning[]
   /**
    * Official avalanche bulletin, deliberately outside `warnings`: it is

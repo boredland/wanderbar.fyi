@@ -217,6 +217,29 @@ export const faqEn: FaqEntry[] = [
       'It is calculated on your device rather than fetched, because no public service offers a free point forecast for it. wanderbar runs the Canadian Fire Weather Index over 60 days of Open-Meteo weather history, which gives it drought memory rather than judging today alone. Treat it as an indication and always follow the local fire ban.'
   },
   {
+    q: 'Why does it warn about lightning separately from thunderstorms?',
+    a: (
+      <>
+        <p>
+          Because they are warnings about different things. The thunderstorm
+          warning is about you: being caught on a ridge with nowhere to go. The
+          lightning warning is about the ground, and whether a strike is likely
+          to start a fire where there is nobody to start one.
+        </p>
+        <p>
+          They do not move together. Rain wets the fuel and drops the fire
+          danger while the same storm delivers the strikes, so a day can show
+          fire danger falling and ignition risk rising at once. wanderbar takes
+          forecast cloud-to-ground flash density from{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>,
+          about six days ahead, and names the same bands the EFFIS map uses.
+        </p>
+      </>
+    ),
+    text:
+      'Because they warn about different things. The thunderstorm warning is about you, being caught out on a ridge with nowhere to go; the lightning warning is about the ground, and whether a strike is likely to start a fire where there is nobody to start one. They do not move together: rain wets the fuel and drops the fire danger while the same storm delivers the strikes, so a day can show fire danger falling and ignition risk rising at once. wanderbar takes forecast cloud-to-ground flash density from Copernicus EFFIS/GWIS about six days ahead and names the same bands the EFFIS map uses.'
+  },
+  {
     q: 'Does it show fires that are already burning?',
     a: (
       <>
@@ -531,6 +554,31 @@ export const faqDe: FaqEntry[] = [
     ),
     text:
       'Sie wird auf deinem Gerät berechnet, nicht abgefragt, weil kein öffentlicher Dienst dafür eine kostenlose Punktvorhersage bietet. wanderbar rechnet den Canadian Fire Weather Index über 60 Tage Open-Meteo-Wetterhistorie, und genau das gibt ihm Dürre-Gedächtnis statt nur den heutigen Tag zu bewerten. Sieh es als Hinweis und halte dich immer an das lokale Feuerverbot.'
+  },
+  {
+    q: 'Warum warnt es vor Blitzen getrennt von Gewittern?',
+    a: (
+      <>
+        <p>
+          Weil es Warnungen über verschiedene Dinge sind. Die Gewitterwarnung
+          gilt dir: dass du auf einem Grat stehst und nirgends hin kannst. Die
+          Blitzwarnung gilt dem Boden und der Frage, ob ein Einschlag dort ein
+          Feuer entzündet, wo niemand eines entzünden würde.
+        </p>
+        <p>
+          Beides läuft nicht im Gleichschritt. Regen durchnässt den Brennstoff
+          und senkt die Waldbrandgefahr, während dasselbe Gewitter die
+          Einschläge bringt: An einem Tag kann die Gefahr fallen und das
+          Zündrisiko gleichzeitig steigen. wanderbar nimmt die vorhergesagte
+          Blitzdichte von{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>,
+          rund sechs Tage im Voraus, und benennt dieselben Stufen wie die
+          EFFIS-Karte.
+        </p>
+      </>
+    ),
+    text:
+      'Weil es Warnungen über verschiedene Dinge sind. Die Gewitterwarnung gilt dir: dass du auf einem Grat stehst und nirgends hin kannst. Die Blitzwarnung gilt dem Boden und der Frage, ob ein Einschlag dort ein Feuer entzündet, wo niemand eines entzünden würde. Beides läuft nicht im Gleichschritt: Regen durchnässt den Brennstoff und senkt die Waldbrandgefahr, während dasselbe Gewitter die Einschläge bringt, sodass an einem Tag die Gefahr fallen und das Zündrisiko gleichzeitig steigen kann. wanderbar nimmt die vorhergesagte Blitzdichte von Copernicus EFFIS/GWIS rund sechs Tage im Voraus und benennt dieselben Stufen wie die EFFIS-Karte.'
   },
   {
     q: 'Zeigt es Brände, die gerade brennen?',
@@ -849,6 +897,32 @@ export const faqFr: FaqEntry[] = [
     ),
     text:
       "C'est calculé sur ton appareil, pas récupéré : aucun service public ne propose de prévision ponctuelle gratuite pour ça. wanderbar fait tourner l'indice forêt-météo (FWI) canadien sur 60 jours d'historique météo Open-Meteo, ce qui lui donne une mémoire de sécheresse au lieu de juger seulement aujourd'hui. Prends ça comme une indication, et respecte toujours l'interdiction locale de feu."
+  },
+  {
+    q: "Pourquoi il alerte sur la foudre séparément des orages ?",
+    a: (
+      <>
+        <p>
+          Parce que ce sont deux alertes sur des choses différentes.
+          L&rsquo;alerte orage te concerne, toi&nbsp;: être pris sur une crête
+          sans nulle part où aller. L&rsquo;alerte foudre concerne le sol, et la
+          question de savoir si un impact risque d&rsquo;allumer un feu là où
+          personne n&rsquo;en allumerait.
+        </p>
+        <p>
+          Les deux ne vont pas ensemble. La pluie mouille le combustible et fait
+          baisser le risque d&rsquo;incendie pendant que le même orage apporte
+          les impacts&nbsp;: un jour peut voir le risque baisser et le risque
+          d&rsquo;allumage monter en même temps. wanderbar prend la densité
+          d&rsquo;impacts prévue chez{' '}
+          <A href="https://forest-fire.emergency.copernicus.eu/">Copernicus EFFIS/GWIS</A>,
+          environ six jours à l&rsquo;avance, et nomme les mêmes niveaux que la
+          carte EFFIS.
+        </p>
+      </>
+    ),
+    text:
+      "Parce que ce sont deux alertes sur des choses différentes. L'alerte orage te concerne, toi : être pris sur une crête sans nulle part où aller. L'alerte foudre concerne le sol, et la question de savoir si un impact risque d'allumer un feu là où personne n'en allumerait. Les deux ne vont pas ensemble : la pluie mouille le combustible et fait baisser le risque d'incendie pendant que le même orage apporte les impacts, donc un jour peut voir le risque baisser et le risque d'allumage monter en même temps. wanderbar prend la densité d'impacts prévue chez Copernicus EFFIS/GWIS environ six jours à l'avance et nomme les mêmes niveaux que la carte EFFIS."
   },
   {
     q: 'Est-ce que ça montre les incendies déjà en cours ?',

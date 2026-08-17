@@ -113,6 +113,11 @@ export function detailText(t: T, locale: Locale, d: Detail): string {
       return t('detail.lyingSnow', { cm: num(locale, Math.round(d.cm)) })
     case 'heat':
       return t('detail.heat', { temp: num(locale, d.tempC, 1) })
+    case 'lightning':
+      return t('detail.lightning', {
+        band: t(`lightningBand.${d.band}` as MessageKey),
+        flashes: num(locale, d.flashesPerKm2, 1)
+      })
     case 'fire':
       return t('detail.fire', {
         danger: t(`fireDanger.${d.danger}` as MessageKey),
